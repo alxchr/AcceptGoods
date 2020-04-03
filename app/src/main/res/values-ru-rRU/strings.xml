@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string name="app_name">Приемка товаров</string>
+
+    <string name="scan_action">Сканировать</string>
+    <string name="storeman_label">Кладовщик</string>
+    <string name="store_choice">Выберите склад</string>
+    <string name="storeman_number_tts">Введите номер кладовщика, нажмите enter</string>
+    <string name="wrong_cell">Неверный номер ячейки</string>
+    <string name="wrong_goods">Неверный код товара</string>
+    <string name="finish">Закончить сканирование</string>
+    <string name="output_cell">Ячейка</string>
+    <string name="goods_code">Код товара</string>
+    <string name="input_cell_label">Ящик</string>
+    <string name="upload_deferred">Сеть отключена, загрузка данных отложена</string>
+    <string name="scan_box">Выберите ящик</string>
+    <string name="scan_goods">Сканируйте товар</string>
+    <string name="scan_cell">Сканируйте ячейку</string>
+    <string name="goods_label">Товар</string>
+    <string name="qty">Количество</string>
+    <string name="placed">Размещено в ячейке</string>
+    <string name="repeat_scan">Повторное сканирование, подтвердите перемещение в другую ячейку</string>
+    <string name="yes">Да</string>
+    <string name="no">Нет</string>
+    <string name="other_cell">Другая ячейка?</string>
+    <string name="force_upload">Войдите в зону WiFi и отправьте данные</string>
+    <string name="upload">Отправить</string>
+</resources>

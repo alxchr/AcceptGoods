@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string-array name="store_names">
+        <item>Кулибина 3                                        </item>
+        <item>Рылеева 18                                        </item>
+        <item>Хлебозаводская 5                                  </item>
+        <item>Троицкий тракт - Склад                            </item>
+        <item>Балашиха -Логистика (ответхранение, По-ШТУЧНОЕ)   </item>
+        <item>Омск склад                                        </item>
+        <item>ЕКБ Березовский                                   </item>
+        <item>Наб.Челны склад                                   </item>
+        <item>Новосибирск-Малыгина                              </item>
+        <item>Нижний Новгород склад                             </item>
+        <item>Пермь Журавлев Закамск                            </item>
+        <item>Пермь Регрин                                      </item>
+        <item>Уфа Тест                                          </item>
+        <item>Троицкий тракт - Торговый зал                     </item>
+        <item>Пермь Грузовой сервис                             </item>
+    </string-array>
+</resources>

@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:orientation="vertical"
+    tools:context=".MainActivity"
+    android:weightSum="8"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+    <TextView
+        android:id="@+id/tvStore"
+        android:layout_weight="1"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:textSize="24sp"
+        />
+    <LinearLayout
+        android:layout_weight="1"
+        android:orientation="horizontal"
+        android:layout_height="0dp"
+        android:weightSum="5"
+        android:layout_width="match_parent">
+
+        <TextView
+            android:id="@+id/textview_first"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:text="@string/storeman_label"
+            android:textSize="24sp"
+            android:layout_weight="4"
+            />
+
+        <EditText
+            android:id="@+id/et_storeman"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:inputType="numberDecimal"
+            android:layout_weight="2"
+            android:lines="1"
+            android:textSize="24sp" />
+    </LinearLayout>
+    <EditText
+        android:id="@+id/etScan"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:lines="1"
+        android:layout_weight="1"/>
+    <LinearLayout
+        android:orientation="horizontal"
+        android:layout_weight="1"
+        android:weightSum="12"
+        android:layout_width="match_parent"
+        android:layout_height="0dp">
+        <TextView
+            android:id="@+id/tvBoxLabel"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="6"
+            android:textSize="20sp"
+            />
+        <TextView
+            android:id="@+id/tvInputCell"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:lines="1"
+            android:layout_weight="6"
+            android:textSize="20sp"
+            />
+    </LinearLayout>
+
+    <FrameLayout
+        android:id="@+id/fragment_placeholder"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="4" />
+</LinearLayout>
