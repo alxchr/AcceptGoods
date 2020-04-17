@@ -9,6 +9,7 @@ public class CheckCode {
      */
     private static String cellNumber = "19\\w+";
     private static String goodsCode = "28\\w+";
+    private static String cell = "\\d+.\\d+";
     /*
     public static boolean checkCode(String code){
         return code.matches(scanPattern);
@@ -26,5 +27,8 @@ public class CheckCode {
     }
     public static boolean checkGoods(String code){
         return code.matches(goodsCode);
+    }
+    public static boolean checkCellStr(String code){
+        return code.matches(cell);
     }
 }

@@ -81,6 +81,7 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
     int qnt;
     GoodsPosition gp;
     String cell;
+    final String[] storeCode = new String[] {"1908","1909","1907","1901","1900","1902","1906","1904","1903","1905","1900","1900","1900","1900","1900"};
     @Override
     protected void onResume() {
         super.onResume();
@@ -433,8 +434,26 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
                 }
                 break;
             case WAIT_CELL:
-                if (CheckCode.checkCell(scan)) {
-                    cell = scan;
+                cell = scan;
+                if (CheckCode.checkCellStr(scan)){
+                    int prefix, suffix;
+                    String result;
+                    prefix = Integer.parseInt(scan.substring(0, scan.indexOf(".")));
+                    suffix = Integer.parseInt(scan.substring(scan.indexOf(".") + 1));
+                    result = storeCode[App.getStoreIndex()] + String.format("%02d",prefix) + String.format("%03d",suffix) + "000";
+                    int [] resDigit = new int[12];
+                    for (int i = 0; i < 12; i++) {
+                        resDigit[i] = Integer.parseInt(result.substring(i, i+1));
+                    }
+                    int e = (resDigit[1] + resDigit[3] + resDigit[5] +resDigit[7] + resDigit[9] + resDigit[11]) * 3;
+                    int o = resDigit[0] + resDigit[2] + resDigit[4] +resDigit[6] + resDigit[8] + resDigit[10];
+                    String r = String.valueOf(o+e);
+                    int c = 10 - Integer.parseInt(r.substring(r.length() -1));
+                    cell = result + c;
+                    Log.d(TAG,"Manual input =" + scan + " cell =" + cell);
+                }
+                if (CheckCode.checkCell(cell)) {
+
                     etScan.setEnabled(false);
                     etQnt.setEnabled(true);
                     etQnt.requestFocus();
