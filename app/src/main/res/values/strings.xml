@@ -23,6 +23,10 @@
     <string name="other_cell">Other cell?</string>
     <string name="force_upload">Go to WiFi zone and press Upload</string>
     <string name="upload">Upload data</string>
+    <string name="cell">Cell</string>
+    <string name="ready">Finish data download</string>
+    <string name="qnt">Enter goods quantity, press Enter</string>
+    <string name="wrong_qnt">Wrong goods quantity</string>
     <!-- TODO: Remove or change this placeholder text -->
     <string name="hello_blank_fragment" translatable="false">Hello blank fragment</string>
 </resources>

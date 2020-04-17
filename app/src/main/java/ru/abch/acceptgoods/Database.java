@@ -11,32 +11,39 @@ import android.util.Log;
 
 import com.bosphere.filelogger.FL;
 
+import java.sql.CallableStatement;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.Statement;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
+import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Date;
 
 public class Database {
     static  String TAG = "Database";
     private static final String DB_NAME = "goodsdb";
-    private static final int DB_VERSION = 1;
+    private static final int DB_VERSION = 2;
     private static final String DB_TABLE_MOVEGOODS = "movegoods";
     private static final String DB_TABLE_MOVEGOODS_DATA = "movegoodsdata";
+    private static final String DB_TABLE_BARCODES = "barcodes";
+    private static final String DB_TABLE_GOODS = "goods";
+    private static final String DB_TABLE_ADDGOODS = "add_goods";
 
-    static final String COLUMN_ID = "_id";
-    static final String COLUMN_WAREHOUSE_CODE = "wh_code";
-    static final String COLUMN_STOREMAN = "storeman";
-    static final String COLUMN_IN1C = "in1c";
-    static final String COLUMN_MOVEGOODS_ID = "movegoods_id";
-    static final String COLUMN_GOODS_CODE = "goods_code";
-    static final String COLUMN_INPUT_CELL = "input_cell";
-    static final String COLUMN_OUTPUT_CELL  = "output_cell";
-    static final String COLUMN_QNT  = "qnt";
-    static final String COLUMN_MOVEGOODS_SCAN_TIME = "scan_time";
+    private static final String COLUMN_ID = "_id";
+    private static final String COLUMN_WAREHOUSE_CODE = "wh_code";
+    private static final String COLUMN_STOREMAN = "storeman";
+    private static final String COLUMN_IN1C = "in1c";
+    private static final String COLUMN_MOVEGOODS_ID = "movegoods_id";
+    private static final String COLUMN_GOODS_CODE = "goods_code";
+    private static final String COLUMN_INPUT_CELL = "input_cell";
+    private static final String COLUMN_OUTPUT_CELL  = "output_cell";
+    private static final String COLUMN_QNT  = "qnt";
+    private static final String COLUMN_MOVEGOODS_SCAN_TIME = "scan_time";
+    private static final String COLUMN_BARCODE  = "barcode";
+    static final String COLUMN_GOODS_DESC = "goods_desc";
 
     private static final String DB_CREATE_MOVEGOODS =
             "create table " + DB_TABLE_MOVEGOODS + "(" +
@@ -55,7 +62,30 @@ public class Database {
                     COLUMN_OUTPUT_CELL + " text, " +
                     COLUMN_QNT + " integer " +
                     ");";
-
+    private static final String DB_CREATE_BARCODES =
+                    "create table " + DB_TABLE_BARCODES + "(" +
+                    COLUMN_ID + " integer primary key autoincrement, " +
+                    COLUMN_GOODS_CODE + " text not null, " +
+                    COLUMN_BARCODE + " text not null, " +
+                    COLUMN_QNT + " integer " +
+                    ");";
+    private static final String DB_CREATE_GOODS =
+            "create table " + DB_TABLE_GOODS + "(" +
+            COLUMN_ID + " integer primary key autoincrement, " +
+                    COLUMN_GOODS_CODE + " text not null, " +
+                    COLUMN_GOODS_DESC + " text not null, " +
+                    COLUMN_OUTPUT_CELL + " text " +
+                    ");";
+    private static final String DB_CREATE_ADDGOODS =
+            "create table " + DB_TABLE_ADDGOODS + "(" +
+                    COLUMN_ID + " integer primary key autoincrement, " +
+                    COLUMN_STOREMAN + " integer, " +
+                    COLUMN_GOODS_CODE + " text not null, " +
+                    COLUMN_BARCODE + " text not null, " +
+                    COLUMN_QNT + " integer, " +
+                    COLUMN_INPUT_CELL + " text, " +
+                    COLUMN_MOVEGOODS_SCAN_TIME + " text " +
+                    ");";
     private final Context mCtx;
     private DBHelper mDBHelper;
     private static SQLiteDatabase mDB;
@@ -98,12 +128,16 @@ public class Database {
         public void onCreate(SQLiteDatabase db) {
             db.execSQL(DB_CREATE_MOVEGOODS);
             db.execSQL(DB_CREATE_MOVEGOODS_DATA);
+            db.execSQL(DB_CREATE_BARCODES);
+            db.execSQL(DB_CREATE_GOODS);
+            db.execSQL(DB_CREATE_ADDGOODS);
             Log.d(TAG, "onCreate");
         }
 
         @Override
         public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
             Log.d(TAG, "Upgrade DB from " + oldVersion + " to " + newVersion);
+            if (oldVersion == 1 && newVersion == 2) db.execSQL(DB_CREATE_BARCODES);
 
         }
     }
@@ -139,6 +173,8 @@ public class Database {
     public static void clearData() {
         mDB.delete(DB_TABLE_MOVEGOODS_DATA,null,null);
         mDB.delete(DB_TABLE_MOVEGOODS,null,null);
+        mDB.delete(DB_TABLE_BARCODES, null, null);
+        mDB.delete(DB_TABLE_GOODS, null, null);
         FL.d(TAG,"Clear tables");
     }
     public static Date getStartOfDay(Date date) {
@@ -152,7 +188,7 @@ public class Database {
     public static void transferMoveGoods() {
         FL.d(TAG, "Transfer move goods");
         Connection con;
-        String generatedColumns[] = new String[] { "rowid" };
+        String[] generatedColumns = new String[] { "rowid" };
         PreparedStatement stmtInsert;
         Statement stmtInsertData;
         ResultSet rs1;
@@ -256,5 +292,162 @@ public class Database {
         ret = c1.getCount();
         c1.close();
         return ret;
+    }
+    public static long addBarCode(String goodsCode, String barCode, int qnt) {
+        long ret = 0;
+        ContentValues cv = new ContentValues();
+        cv.put(COLUMN_GOODS_CODE, goodsCode);
+        cv.put(COLUMN_BARCODE, barCode);
+        cv.put(COLUMN_QNT, qnt);
+        try {
+            ret = mDB.insert(DB_TABLE_BARCODES, null, cv);
+        }  catch (SQLiteException ex) {
+            FL.e(TAG, Arrays.toString(ex.getStackTrace()));
+        }
+        return ret;
+    }
+    public static void getBarCodes (String storeID) {
+        Connection con = connectionClass.CONN();;
+        String SQL = "exec spr.dbo.dctGetAcceptGoodsData 2,'" + storeID + "';";
+        Log.d(TAG, "Get bar codes for "+ storeID);
+        try {
+            Statement stmt = con.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY);
+            boolean result = stmt.execute(SQL);
+            if (result) {
+                ResultSet rs = stmt.getResultSet();
+                rs.beforeFirst();
+                mDB.beginTransaction();
+                while (rs.next()) {
+                    String goodsCode = rs.getString(1);
+                    String barCode = rs.getString(2);
+                    int qnt = rs.getInt(3);
+                    Log.d(TAG, "Goods code =" + goodsCode + " Barcode = " + barCode + " Qnt = " + qnt);
+                    addBarCode(goodsCode, barCode, qnt);
+                }
+                mDB.setTransactionSuccessful();
+                mDB.endTransaction();
+            } else Log.d(TAG, "No result");
+        } catch (java.sql.SQLException e) {
+            e.printStackTrace();
+        }
+    }
+    public static long addGoods(String goodsCode, String desc, String cell) {
+        long ret = 0;
+        ContentValues cv = new ContentValues();
+        cv.put(COLUMN_GOODS_CODE, goodsCode);
+        cv.put(COLUMN_GOODS_DESC, desc);
+        cv.put(COLUMN_OUTPUT_CELL, cell);
+        try {
+            ret = mDB.insert(DB_TABLE_GOODS, null, cv);
+        }  catch (SQLiteException ex) {
+            FL.e(TAG, Arrays.toString(ex.getStackTrace()));
+        }
+        return ret;
+    }
+    public static void getGoods (String storeID) {
+        Connection con = connectionClass.CONN();;
+        String SQL = "exec spr.dbo.dctGetAcceptGoodsData 1,'" + storeID + "';";
+        Log.d(TAG, "Get goods for "+ storeID);
+        try {
+            Statement stmt = con.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY);
+            boolean result = stmt.execute(SQL);
+            if (result) {
+                ResultSet rs = stmt.getResultSet();
+                rs.beforeFirst();
+                mDB.beginTransaction();
+                while (rs.next()) {
+                    String goodsCode = rs.getString(1);
+                    String desc = rs.getString(3);
+                    String cell = rs.getString(7);
+                    Log.d(TAG, "Goods code =" + goodsCode + " desc = " + desc + " cell = " + cell);
+                    addGoods(goodsCode, desc, cell);
+                }
+                mDB.setTransactionSuccessful();
+                mDB.endTransaction();
+            } else Log.d(TAG, "No result");
+        } catch (java.sql.SQLException e) {
+            e.printStackTrace();
+        }
+    }
+    public static GoodsPosition getGoodsPosition(String barcode) {
+        GoodsPosition ret = null;
+        String goodsCode;
+        int qnt;
+        String barcodeTable = DB_TABLE_BARCODES;
+        String goodsTable = DB_TABLE_GOODS;
+        String description, cell;
+        Log.d(TAG, "Goods position barcode = " + barcode);
+        Cursor c = mDB.query( barcodeTable, null,COLUMN_BARCODE + "=?", new String[]{barcode},
+                null, null, null, null );
+        if (c.moveToFirst()) {
+            goodsCode = c.getString(1);
+            qnt = c.getInt(3);
+            Log.d(TAG, "Found goods position code = " + goodsCode + " qnt = " + qnt);
+            Cursor cGoods = mDB.query( goodsTable, null,COLUMN_GOODS_CODE + "=?", new String[]{goodsCode},
+                    null, null, null, null );
+            if (cGoods.moveToFirst()) {
+                description = cGoods.getString(2);
+                cell = cGoods.getString(3);
+                ret = new GoodsPosition(goodsCode, barcode, description, cell, qnt);
+                Log.d(TAG, "Found goods position desc = " + description + " cell = " + cell);
+            }
+        }
+        return ret;
+    }
+    public static long insertAcceptGoods(String storage, int storeman, String goodsId, String barcode, int qnt, String cell, String time) {
+        String insert = "insert into dbo.dctRcvAcceptGoods(storage,storeman,goods,goodsbarcode,qnt,cellinbarcode,scandt) values ('";
+        String query = insert + storage + "'," + storeman + ",'" + goodsId + "','" + barcode + "'," + qnt + ",'" + cell +"','" + time +"');";
+        FL.d(TAG, "Query =" + query);
+        long ret = 0;
+        Connection con;
+        String[] generatedColumns = new String[] { "rowid" };
+        PreparedStatement stmtInsert;
+        con = connectionClass.CONN();
+        ResultSet rs;
+        try {
+            stmtInsert  = con.prepareStatement(query, generatedColumns);
+            int affectedRows = stmtInsert.executeUpdate();
+            if (affectedRows == 0) {
+                throw new SQLException("no rows affected.");
+            }
+            rs = stmtInsert.getGeneratedKeys();
+            if (rs.next()) {
+                ret = rs.getLong(1);
+                Log.d(TAG,"Inserted ID = " + ret);
+            }
+            stmtInsert.close();
+            rs.close();
+        } catch (java.sql.SQLException e) {
+            e.printStackTrace();
+        }
+        return ret;
+    }
+    public static long addAcceptGoods(int storeman, String goodsId, String barcode, int qnt, String cell, String datetime) {
+        long ret = 0;
+        ContentValues cv = new ContentValues();
+        cv.put(COLUMN_STOREMAN,storeman);
+        cv.put(COLUMN_GOODS_CODE,goodsId);
+        cv.put(COLUMN_BARCODE, barcode);
+        cv.put(COLUMN_QNT, qnt);
+        cv.put(COLUMN_INPUT_CELL, cell);
+        cv.put(COLUMN_MOVEGOODS_SCAN_TIME, datetime);
+        try {
+            ret = mDB.insert(DB_TABLE_ADDGOODS, null, cv);
+        }  catch (SQLiteException ex) {
+            FL.e(TAG, Arrays.toString(ex.getStackTrace()));
+        }
+        return ret;
+    }
+    public static void uploadGoods(){
+        Cursor c = mDB.query(DB_TABLE_ADDGOODS, null, null, null, null, null, null);
+        int n = c.getCount();
+        if (n > 0) {
+            while (c.moveToNext()) {
+                insertAcceptGoods(App.getStoreId(), c.getInt(1), c.getString(2), c.getString(3), c.getInt(4), c.getString(5), c.getString(6));
+            }
+            Log.d(TAG, "Upload " + n + " rows from localDB to server");
+        }
+        c.close();
+        mDB.delete(DB_TABLE_ADDGOODS, null, null);
     }
 }

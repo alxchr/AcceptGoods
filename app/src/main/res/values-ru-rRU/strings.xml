@@ -26,4 +26,8 @@
     <string name="other_cell">Другая ячейка?</string>
     <string name="force_upload">Войдите в зону WiFi и отправьте данные</string>
     <string name="upload">Отправить</string>
+    <string name="cell">Ячейка</string>
+    <string name="ready">Загрузка данных завершена</string>
+    <string name="qnt">Введите количество</string>
+    <string name="wrong_qnt">Недопустимое количество товара</string>
 </resources>

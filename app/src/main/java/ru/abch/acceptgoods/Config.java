@@ -5,6 +5,7 @@ import android.util.Log;
 
 public class Config {
     public static final String db = "RCall";
+//    private static String TAG = "Config";
 //    public static final String ip = "10.0.1.11";
     public static final String ip = "10.0.1.10";
 //    public static final String ip = "10.2.0.31";
@@ -31,8 +32,10 @@ public class Config {
         int i = 0;
         if (Integer.parseInt(c.substring(2,6)) == 0) {
             String s = c.substring(6,12);
-            while (s.substring(i, i+1).equals("0") && s.length() > 0)
-                s = s.substring(++i);
+            while (s.substring(0, 1).equals("0") && s.length() > 0 ) {
+                s = s.substring(1);
+//                Log.d(TAG, "s=" + s + " i = " + i + " " + s.substring(0, 1));
+            }
             i = 0;
             while (!s.substring(i, i+1).equals("0") && s.length() > 0) {
                 ret += s.substring(i, i + 1);

@@ -33,8 +33,12 @@ import android.widget.Toast;
 
 import com.bosphere.filelogger.FL;
 
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Date;
 import java.util.Locale;
+import java.util.TimeZone;
 
 public class MainActivity extends AppCompatActivity implements TextToSpeech.OnInitListener,Button.OnClickListener{
     AlertDialog.Builder adbSettings, adbCell, adbUpload;
@@ -45,11 +49,12 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
     EditText etStoreMan;
     String sStoreMan;
     int storeMan;
-    TextView tvInputCell, tvPrompt, tvBoxLabel;
-    EditText etScan;
+    TextView tvInputCell, tvPrompt, tvBoxLabel, tvDescription, tvCell, tvGoods;
+    EditText etScan, etQnt;
     private String input;
-    private final int WAIT_INPUT_CELL = 0, WAIT_OUTPUT_CELL = 1, WAIT_GOODS_CODE = 2;
-    private int state = WAIT_INPUT_CELL;
+    private final int WAIT_INPUT_CELL = 0, WAIT_OUTPUT_CELL = 1, WAIT_GOODS_CODE = 2, WAIT_GOODS_BARCODE = 3, WAIT_CELL = 4, WAIT_QTY = 5;
+//    private int state = WAIT_INPUT_CELL;
+    private int state = WAIT_GOODS_BARCODE;
     private String inputCell, outputCell, goodsCode;
     private long moveGoodsId, moveGoodsRow;
 //    ArrayMap<String,String> goodsItem, goods;
@@ -61,14 +66,21 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
     final static String CONNECTIVITY_ACTION = "android.net.conn.CONNECTIVITY_CHANGE";
     IntentFilter intentFilter;
     public static boolean online = false;
+    /*
     BlankFragment1 fragment1;
     BlankFragment2 fragment2;
     BlankFragment3 fragment3;
     BlankFragment4 fragment4;
+    BlankFragment5 fragment5;
     FragmentTransaction fTrans;
+
+     */
     private static boolean updateMoveGoodsData = false;
     final String[] ids = new String[] {"     2   ", "     JCTR", "    10SSR", "    12SPR", "    1ASPR", "    1BSPR", "    1ISPR", "    1LSPR",
     "    1OSPR", "    1PSPR", "    1CSPR", "    1SSPR", "    1USPR", "    15SPR", "    1TSPR"};
+    int qnt;
+    GoodsPosition gp;
+    String cell;
     @Override
     protected void onResume() {
         super.onResume();
@@ -120,7 +132,8 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_one);
+//        setContentView(R.layout.activity_one);
+        setContentView(R.layout.activity_main);
         getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_HIDDEN);
         mTTS = new TextToSpeech(this, this);
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE) !=
@@ -148,7 +161,7 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
         tvStore = findViewById(R.id.tvStore);
         tvStore.setText(App.getStoreName());
         etStoreMan = findViewById(R.id.et_storeman);
-        tvInputCell = findViewById(R.id.tvInputCell);
+        tvCell = findViewById(R.id.tvCell);
         etScan = findViewById(R.id.etScan);
         if(App.getStoreMan() > 0 ) {
             etStoreMan.setText(String.valueOf(App.getStoreMan()));
@@ -162,16 +175,23 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
                     try {
                         storeMan = Integer.parseInt(sStoreMan);
                         FL.d(TAG, "Storeman = " + storeMan);
-                        etScan.requestFocus();
-                        etScan.getText().clear();
+//                        say(getResources().getString(R.string.ready));
 //                        tvPrompt.setText(getResources().getString(R.string.scan_box));
-                        fTrans = getSupportFragmentManager().beginTransaction();
-                        fTrans.replace(R.id.fragment_placeholder,fragment1);
-                        fTrans.commit();
+//                        fTrans = getSupportFragmentManager().beginTransaction();
+//                        fTrans.replace(R.id.fragment_placeholder,fragment1);
+//                        fTrans.replace(R.id.fragment_placeholder,fragment5);
+//                        fTrans.commit();
                     } catch (NumberFormatException e) {
                         e.printStackTrace();
                     }
-                    if (storeMan > 0) App.setStoreMan(storeMan);
+                    if (storeMan > 0) {
+                        App.setStoreMan(storeMan);
+                        etStoreMan.setEnabled(false);
+                        etScan.setEnabled(true);
+                        etScan.requestFocus();
+                        etScan.getText().clear();
+                        tvPrompt.setText(getResources().getString(R.string.scan_goods));
+                    }
                 }
                 return false;
             }
@@ -220,11 +240,14 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
         tvPrompt = findViewById(R.id.tvPrompt);
         tvPrompt.setText(getResources().getString(R.string.storeman_number_tts));
 
-         */
+
         fragment1 = new BlankFragment1();
         fragment2 = new BlankFragment2();
         fragment3 = new BlankFragment3();
         fragment4 = new BlankFragment4();
+        fragment5 = new BlankFragment5();
+
+         */
         tvBoxLabel = findViewById(R.id.tvBoxLabel);
         adbCell = new AlertDialog.Builder(this, R.style.MyAlertDialogTheme);
         adbCell.setMessage(R.string.other_cell);
@@ -237,9 +260,12 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
             public void onClick(DialogInterface dialog, int arg1) {
                 state = WAIT_OUTPUT_CELL;
                 updateMoveGoodsData = true;
+                /*
                 fTrans = getSupportFragmentManager().beginTransaction();
                 fTrans.replace(R.id.fragment_placeholder, fragment3);
                 fTrans.commit();
+
+                 */
                 getSupportFragmentManager().executePendingTransactions();
                 BlankFragment3 f3 = (BlankFragment3) getSupportFragmentManager().findFragmentById(R.id.fragment_placeholder);
                 if (f3 == null) Log.e(TAG, "Fragment3 not found");
@@ -260,15 +286,60 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
                     state = WAIT_INPUT_CELL;
                     tvBoxLabel.setText("");
                     tvInputCell.setText("");
+                    /*
                     fTrans = getSupportFragmentManager().beginTransaction();
                     fTrans.replace(R.id.fragment_placeholder,fragment1);
                     fTrans.commit();
+
+                     */
                 } else {
                     say(getResources().getString(R.string.upload_deferred));
                 }
             }
         });
         adbUpload.setCancelable(false);
+        tvGoods = findViewById(R.id.tvGoods);
+        etQnt = findViewById(R.id.etQty);
+        tvPrompt = findViewById(R.id.tvPrompt);
+        tvDescription = findViewById(R.id.tvDescription);
+        Database.getBarCodes(App.getStoreId());
+        Database.getGoods(App.getStoreId());
+        etQnt.setOnKeyListener(new View.OnKeyListener() {
+            long row = 0;
+            @Override
+            public boolean onKey(View view, int i, KeyEvent keyEvent) {
+                if(keyEvent.getAction() == KeyEvent.ACTION_DOWN &&
+                        (i == KeyEvent.KEYCODE_ENTER)){
+//                    qnt = etStoreMan.getText().toString();
+                    try {
+                        qnt = Integer.parseInt(etQnt.getText().toString());
+                        FL.d(TAG, "qnt = " + storeMan);
+                    } catch (NumberFormatException e) {
+                        e.printStackTrace();
+                        qnt = -1;
+                    }
+                    if (qnt > 0 && qnt < 1000) {
+                        etQnt.setEnabled(false);
+                        etScan.setEnabled(true);
+                        etScan.requestFocus();
+                        etScan.getText().clear();
+                        tvPrompt.setText(getResources().getString(R.string.scan_goods));
+                        long scanTime = Config.toComttTime(System.currentTimeMillis());
+                        FL.d(TAG, "Insert storage =" + App.getStoreId() +
+                                " storeman=" + storeMan + " goods id =" + gp.id + " barcode =" + gp.barcode +
+                                " qnt =" + qnt + " cell =" + cell + " time =" + getCurrentTime());
+                        if (online) row = Database.insertAcceptGoods(App.getStoreId(), storeMan, gp.id, gp.barcode, qnt, cell, getCurrentTime());
+                        if (row == 0) {
+                            Database.addAcceptGoods(storeMan, gp.id, gp.barcode, qnt, cell, getCurrentTime());
+                        }
+                    } else {
+                        etQnt.getText().clear();
+                        say(getResources().getString(R.string.wrong_qnt));
+                    }
+                }
+                return false;
+            }
+        });
     }
     public static void say(String text) {
         if (Config.tts) mTTS.speak(text, TextToSpeech.QUEUE_ADD, null, null);
@@ -282,9 +353,12 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
                     tvBoxLabel.setText(getResources().getString(R.string.input_cell_label));
                     inputCell = scan;
                     moveGoodsId = Database.addMoveGoods(App.getStoreId(), storeMan);
+                    /*
                     fTrans = getSupportFragmentManager().beginTransaction();
                     fTrans.replace(R.id.fragment_placeholder, fragment2);
                     fTrans.commit();
+
+                     */
                     state = WAIT_GOODS_CODE;
                 } else {
                     say(getResources().getString(R.string.wrong_cell));
@@ -301,9 +375,12 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
                     } else {
                         Database.addMoveGoodsData(moveGoodsId, goodsCode, inputCell, outputCell, Config.getQty(goodsCode));
                     }
+                    /*
                     fTrans = getSupportFragmentManager().beginTransaction();
                     fTrans.replace(R.id.fragment_placeholder,fragment4);
                     fTrans.commit();
+
+                     */
                     getSupportFragmentManager().executePendingTransactions();
                     BlankFragment4 f4 = (BlankFragment4) getSupportFragmentManager().findFragmentById(R.id.fragment_placeholder);
                     if (f4 == null) Log.e(TAG, "Fragment4 not found");
@@ -321,9 +398,12 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
                     if (moveGoodsRow == 0) {    //unique code
                         state = WAIT_OUTPUT_CELL;
                         updateMoveGoodsData = false;
+                        /*
                         fTrans = getSupportFragmentManager().beginTransaction();
                         fTrans.replace(R.id.fragment_placeholder, fragment3);
                         fTrans.commit();
+
+                         */
                         getSupportFragmentManager().executePendingTransactions();
                         BlankFragment3 f3 = (BlankFragment3) getSupportFragmentManager().findFragmentById(R.id.fragment_placeholder);
                         if (f3 == null) Log.e(TAG, "Fragment3 not found");
@@ -339,9 +419,34 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
                     say(getResources().getString(R.string.wrong_goods));
                 }
                 break;
+            case WAIT_GOODS_BARCODE:
+                gp = Database.getGoodsPosition(scan);
+                if (gp == null) {
+                    say(getResources().getString(R.string.wrong_goods));
+                } else {
+                    etQnt.setText(String.valueOf(gp.qnt));
+                    tvGoods.setText(gp.barcode);
+                    tvCell.setText(gp.cell);
+                    tvDescription.setText(gp.description);
+                    tvPrompt.setText(getResources().getString(R.string.scan_cell));
+                    state = WAIT_CELL;
+                }
+                break;
+            case WAIT_CELL:
+                if (CheckCode.checkCell(scan)) {
+                    cell = scan;
+                    etScan.setEnabled(false);
+                    etQnt.setEnabled(true);
+                    etQnt.requestFocus();
+                    etQnt.setSelection(etQnt.getText().length());
+                    tvCell.setText(Config.formatCell(cell));
+                    tvPrompt.setText(getResources().getString(R.string.qnt));
+                    state = WAIT_GOODS_BARCODE;
+                } else say(getResources().getString(R.string.wrong_cell));
+                break;
             default:
                 Log.d(TAG,"WTF switch");
-                state = WAIT_INPUT_CELL;
+                state = WAIT_GOODS_BARCODE;
 //                tvPrompt.setText(getResources().getString(R.string.scan_box));
                 break;
         }
@@ -365,9 +470,12 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
             state = WAIT_INPUT_CELL;
             tvBoxLabel.setText("");
             tvInputCell.setText("");
+            /*
             fTrans = getSupportFragmentManager().beginTransaction();
             fTrans.replace(R.id.fragment_placeholder,fragment1);
             fTrans.commit();
+
+             */
         } else {
             say(getResources().getString(R.string.force_upload));
             adbUpload.create().show();
@@ -381,6 +489,7 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
                 FL.d(TAG,"Network " + cm.getActiveNetworkInfo().getExtraInfo() + " " + cm.getActiveNetworkInfo().getDetailedState());
                 phrase = "wifi подключен";
                 online = true;
+                Database.uploadGoods();
             } else {
                 FL.d(TAG, "Network disconnected");
                 phrase = "wifi отключен";
@@ -390,4 +499,10 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
             Toast.makeText(context, phrase, Toast.LENGTH_LONG).show();
         }
     };
+    public static String getCurrentTime() {
+        SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+        dateFormat.setTimeZone(TimeZone.getTimeZone("Asia/Yekaterinburg"));
+        Date today = Calendar.getInstance().getTime();
+        return dateFormat.format(today);
+    }
 }
