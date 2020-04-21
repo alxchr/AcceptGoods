@@ -1,4 +1,4 @@
-package ru.abch.acceptgoods;
+package ru.abch.acceptgoods2;
 import android.app.Application;
 import android.content.SharedPreferences;
 import android.os.Environment;
@@ -36,7 +36,7 @@ public class App extends Application {
         FL.init(new FLConfig.Builder(this)
                 .minLevel(FLConst.Level.V)
                 .logToFile(true)
-                .dir(new File(Environment.getExternalStorageDirectory(), "GoodsAcceptance"))
+                .dir(new File(Environment.getExternalStorageDirectory(), "AcceptGoods2"))
                 .retentionPolicy(FLConst.RetentionPolicy.FILE_COUNT)
                 .build());
         FL.setEnabled(true);

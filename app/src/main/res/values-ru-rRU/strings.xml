@@ -1,14 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
-    <string name="app_name">Приемка товаров</string>
+    <string name="app_name">Приемка 2</string>
 
     <string name="scan_action">Сканировать</string>
     <string name="storeman_label">Кладовщик</string>
     <string name="store_choice">Выберите склад</string>
     <string name="storeman_number_tts">Введите номер кладовщика, нажмите enter</string>
     <string name="wrong_cell">Неверный номер ячейки</string>
-    <string name="wrong_goods">Неверный код товара</string>
+    <string name="wrong_goods">Неизвестный код товара, загрузите приемку</string>
     <string name="finish">Закончить сканирование</string>
     <string name="output_cell">Ячейка</string>
     <string name="goods_code">Код товара</string>
@@ -29,5 +29,15 @@
     <string name="cell">Ячейка</string>
     <string name="ready">Загрузка данных завершена</string>
     <string name="qnt">Введите количество</string>
-    <string name="wrong_qnt">Недопустимое количество товара</string>
+    <string name="wrong_qnt">Недопустимое количество товара, повторите ввод</string>
+    <string name="exit">Выход</string>
+    <string name="refresh">Загрузить приемку</string>
+    <string name="settings">Настройки</string>
+    <string name="close_scan">Отменить сканирование?</string>
+    <string name="close_settings">Закрыть настройки?</string>
+    <string name="error">Ошибка!</string>
+    <string name="enter_again">Введите повторно</string>
+    <string name="dismiss">Отменить</string>
+    <string name="search">Поиск</string>
+    <string name="goods_choice">Выберите товар</string>
 </resources>

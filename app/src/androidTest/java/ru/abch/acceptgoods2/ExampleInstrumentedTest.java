@@ -1,4 +1,4 @@
-package ru.abch.acceptgoods;
+package ru.abch.acceptgoods2;
 
 import android.content.Context;
 
@@ -22,6 +22,6 @@ public class ExampleInstrumentedTest {
         // Context of the app under test.
         Context appContext = InstrumentationRegistry.getInstrumentation().getTargetContext();
 
-        assertEquals("ru.abch.acceptgoods", appContext.getPackageName());
+        assertEquals("ru.abch.acceptgoods2", appContext.getPackageName());
     }
 }

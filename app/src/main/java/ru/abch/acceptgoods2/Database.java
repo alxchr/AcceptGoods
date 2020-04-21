@@ -1,4 +1,4 @@
-package ru.abch.acceptgoods;
+package ru.abch.acceptgoods2;
 
 import android.content.ContentValues;
 import android.content.Context;
@@ -11,7 +11,6 @@ import android.util.Log;
 
 import com.bosphere.filelogger.FL;
 
-import java.sql.CallableStatement;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -449,5 +448,38 @@ public class Database {
         }
         c.close();
         mDB.delete(DB_TABLE_ADDGOODS, null, null);
+    }
+    public static GoodsPosition[] searchGoods(String searchPattern) {
+        GoodsPosition[] ret = null;
+        int qnt;
+        String goodsCode, description, cell, barcode;
+        Cursor c = mDB.query( true, DB_TABLE_GOODS, new String[] {COLUMN_GOODS_CODE, COLUMN_GOODS_DESC, COLUMN_OUTPUT_CELL}, COLUMN_GOODS_DESC + " like ?", new String[] {"%" + searchPattern + "%"},
+                null, null, null, null);
+        int count = c.getCount();
+        Log.d(TAG, "Found " + count + " rows for " + searchPattern);
+        if (count > 0) {
+            ret = new GoodsPosition[count];
+            c.moveToFirst();
+            for (int i = 0; i < count; i++) {
+                goodsCode = c.getString(0);
+                description = c.getString(1);
+                Cursor c1 = mDB.query(true, DB_TABLE_BARCODES,null,COLUMN_GOODS_CODE+" =?", new String[] {goodsCode},
+                        null, null, null,"1");
+                Log.d(TAG, "Barcode count = " + c1.getCount());
+                barcode = "";
+                qnt = 0;
+                while (c1.moveToNext()) {
+                    String id = c1.getString(1);
+                    barcode = c1.getString(2);
+                    qnt = c1.getInt(3);
+//                    Log.d(TAG, "Id =" + id + " barcode =" + barcode + " qnt=" + qnt);
+                }
+                cell = c.getString(2);
+                GoodsPosition gp = new GoodsPosition(goodsCode,barcode, description, cell, qnt);
+                ret[i] = gp;
+                c.moveToNext();
+            }
+        }
+        return ret;
     }
 }

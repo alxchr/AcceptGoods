@@ -1,4 +1,4 @@
-package ru.abch.acceptgoods;
+package ru.abch.acceptgoods2;
 
 import org.junit.Test;
 

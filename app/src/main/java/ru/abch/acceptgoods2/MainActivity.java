@@ -1,11 +1,11 @@
-package ru.abch.acceptgoods;
+package ru.abch.acceptgoods2;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.collection.ArrayMap;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
-import androidx.fragment.app.FragmentTransaction;
 
 
 import android.Manifest;
@@ -17,31 +17,33 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.pm.PackageManager;
 import android.net.ConnectivityManager;
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.speech.tts.TextToSpeech;
-import android.util.ArrayMap;
 import android.util.Log;
 import android.view.KeyEvent;
+import android.view.Menu;
+import android.view.MenuItem;
 import android.view.View;
 import android.view.WindowManager;
-import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.EditText;
-import android.widget.ListView;
+import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import com.bosphere.filelogger.FL;
+import com.google.android.material.floatingactionbutton.FloatingActionButton;
+import com.google.android.material.snackbar.Snackbar;
 
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.Locale;
 import java.util.TimeZone;
 
-public class MainActivity extends AppCompatActivity implements TextToSpeech.OnInitListener,Button.OnClickListener{
-    AlertDialog.Builder adbSettings, adbCell, adbUpload;
+public class MainActivity extends AppCompatActivity implements TextToSpeech.OnInitListener{
+    AlertDialog.Builder adbSettings, adbError, adbUpload;
     private String TAG = "MainActivity";
     private static final int REQ_PERMISSION = 1233;
     private static TextToSpeech mTTS;
@@ -49,39 +51,28 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
     EditText etStoreMan;
     String sStoreMan;
     int storeMan;
-    TextView tvInputCell, tvPrompt, tvBoxLabel, tvDescription, tvCell, tvGoods;
+    TextView  tvPrompt, tvBoxLabel, tvDescription, tvCell, tvGoods;
     EditText etScan, etQnt;
     private String input;
-    private final int WAIT_INPUT_CELL = 0, WAIT_OUTPUT_CELL = 1, WAIT_GOODS_CODE = 2, WAIT_GOODS_BARCODE = 3, WAIT_CELL = 4, WAIT_QTY = 5;
-//    private int state = WAIT_INPUT_CELL;
+    private final int WAIT_QNT = 0, ERROR = 1, WAIT_GOODS_CODE = 2, WAIT_GOODS_BARCODE = 3, WAIT_CELL = 4;
     private int state = WAIT_GOODS_BARCODE;
-    private String inputCell, outputCell, goodsCode;
-    private long moveGoodsId, moveGoodsRow;
-//    ArrayMap<String,String> goodsItem, goods;
-//    ArrayList<ArrayMap<String,String>> goodsArray;
-//    ArrayAdapter<ArrayMap<String, String>> itemsAdapter;
+
 
     Button process;
     ConnectivityManager cm;
     final static String CONNECTIVITY_ACTION = "android.net.conn.CONNECTIVITY_CHANGE";
     IntentFilter intentFilter;
     public static boolean online = false;
-    /*
-    BlankFragment1 fragment1;
-    BlankFragment2 fragment2;
-    BlankFragment3 fragment3;
-    BlankFragment4 fragment4;
-    BlankFragment5 fragment5;
-    FragmentTransaction fTrans;
-
-     */
     private static boolean updateMoveGoodsData = false;
     final String[] ids = new String[] {"     2   ", "     JCTR", "    10SSR", "    12SPR", "    1ASPR", "    1BSPR", "    1ISPR", "    1LSPR",
     "    1OSPR", "    1PSPR", "    1CSPR", "    1SSPR", "    1USPR", "    15SPR", "    1TSPR"};
     int qnt;
     GoodsPosition gp;
     String cell;
+    AlertDialog.Builder ad, adScan, adbGoods;
     final String[] storeCode = new String[] {"1908","1909","1907","1901","1900","1902","1906","1904","1903","1905","1900","1900","1900","1900","1900"};
+    String[] names;
+    ProgressBar pbbar;
     @Override
     protected void onResume() {
         super.onResume();
@@ -141,7 +132,7 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
                 PackageManager.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(this, new String[] {Manifest.permission.WRITE_EXTERNAL_STORAGE}, REQ_PERMISSION);
         }
-        final String[] names = getResources().getStringArray(R.array.store_names);
+        names = getResources().getStringArray(R.array.store_names);
 //        final String[] ids = getResources().getStringArray(R.array.store_ids);
         FL.d(TAG, "Store names length = " + names.length);
         adbSettings = new AlertDialog.Builder(this);
@@ -159,6 +150,8 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
 
                     }).create().show();
         }
+        pbbar = findViewById(R.id.pbbar);
+        pbbar.setVisibility(View.GONE);
         tvStore = findViewById(R.id.tvStore);
         tvStore.setText(App.getStoreName());
         etStoreMan = findViewById(R.id.et_storeman);
@@ -176,12 +169,6 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
                     try {
                         storeMan = Integer.parseInt(sStoreMan);
                         FL.d(TAG, "Storeman = " + storeMan);
-//                        say(getResources().getString(R.string.ready));
-//                        tvPrompt.setText(getResources().getString(R.string.scan_box));
-//                        fTrans = getSupportFragmentManager().beginTransaction();
-//                        fTrans.replace(R.id.fragment_placeholder,fragment1);
-//                        fTrans.replace(R.id.fragment_placeholder,fragment5);
-//                        fTrans.commit();
                     } catch (NumberFormatException e) {
                         e.printStackTrace();
                     }
@@ -215,19 +202,13 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
                             input = input.substring(1);
                         } else input = input.substring(0, entIndex);
                     }
-                    processScan(input);
+                    if (input.length() > 2) processScan(input);
+                    else say(getResources().getString(R.string.enter_again));
                 }
                 return false;
             }
         });
 
-/*
-        process = findViewById(R.id.button_process);
-        process.setOnClickListener(this);
-        process.setEnabled(false);
-
- */
-//        say(getResources().getString(R.string.storeman_number_tts));
         cm = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
         cm.addDefaultNetworkActiveListener(new ConnectivityManager.OnNetworkActiveListener() {
             @Override
@@ -237,62 +218,37 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
         });
         intentFilter = new IntentFilter();
         intentFilter.addAction(CONNECTIVITY_ACTION);
-        /*
-        tvPrompt = findViewById(R.id.tvPrompt);
-        tvPrompt.setText(getResources().getString(R.string.storeman_number_tts));
 
-
-        fragment1 = new BlankFragment1();
-        fragment2 = new BlankFragment2();
-        fragment3 = new BlankFragment3();
-        fragment4 = new BlankFragment4();
-        fragment5 = new BlankFragment5();
-
-         */
         tvBoxLabel = findViewById(R.id.tvBoxLabel);
-        adbCell = new AlertDialog.Builder(this, R.style.MyAlertDialogTheme);
-        adbCell.setMessage(R.string.other_cell);
-        adbCell.setNegativeButton(R.string.no,new DialogInterface.OnClickListener() {
-            public void onClick(DialogInterface dialog, int arg1) {
-                updateMoveGoodsData = false;
-            }
-        });
-        adbCell.setPositiveButton(R.string.yes,new DialogInterface.OnClickListener() {
-            public void onClick(DialogInterface dialog, int arg1) {
-                state = WAIT_OUTPUT_CELL;
-                updateMoveGoodsData = true;
-                /*
-                fTrans = getSupportFragmentManager().beginTransaction();
-                fTrans.replace(R.id.fragment_placeholder, fragment3);
-                fTrans.commit();
 
-                 */
-                getSupportFragmentManager().executePendingTransactions();
-                BlankFragment3 f3 = (BlankFragment3) getSupportFragmentManager().findFragmentById(R.id.fragment_placeholder);
-                if (f3 == null) Log.e(TAG, "Fragment3 not found");
-                else {
-                    f3.setGoods(goodsCode);
-                    f3.setQty(Config.getQty(goodsCode));
-                }
+        adbError = new AlertDialog.Builder(this, R.style.MyAlertDialogTheme);
+        adbError.setMessage(R.string.error);
+        adbError.setNegativeButton(R.string.dismiss,new DialogInterface.OnClickListener() {
+            public void onClick(DialogInterface dialog, int arg1) {
+                state = WAIT_GOODS_BARCODE;
+                etQnt.setText("");
+                etScan.setText("");
+                tvCell.setText("");
+                tvDescription.setText("");
+                tvPrompt.setText(getResources().getString(R.string.scan_goods));
+                tvGoods.setText("");
             }
         });
-        adbCell.setCancelable(false);
+        adbError.setPositiveButton(R.string.enter_again,new DialogInterface.OnClickListener() {
+            public void onClick(DialogInterface dialog, int arg1) {
+                etQnt.setText("");
+                etQnt.requestFocus();
+            }
+        });
+        adbError.setCancelable(false);
+
+
         adbUpload = new AlertDialog.Builder(this, R.style.MyAlertDialogTheme);
         adbUpload.setMessage(R.string.force_upload);
         adbUpload.setPositiveButton(R.string.upload,new DialogInterface.OnClickListener() {
             public void onClick(DialogInterface dialog, int arg1) {
                 if (online) {
-                    Database.transferMoveGoods();
-                    etStoreMan.requestFocus();
-                    state = WAIT_INPUT_CELL;
-                    tvBoxLabel.setText("");
-                    tvInputCell.setText("");
-                    /*
-                    fTrans = getSupportFragmentManager().beginTransaction();
-                    fTrans.replace(R.id.fragment_placeholder,fragment1);
-                    fTrans.commit();
-
-                     */
+                    refreshData();
                 } else {
                     say(getResources().getString(R.string.upload_deferred));
                 }
@@ -303,127 +259,144 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
         etQnt = findViewById(R.id.etQty);
         tvPrompt = findViewById(R.id.tvPrompt);
         tvDescription = findViewById(R.id.tvDescription);
-        Database.getBarCodes(App.getStoreId());
-        Database.getGoods(App.getStoreId());
+        refreshData();
         etQnt.setOnKeyListener(new View.OnKeyListener() {
             long row = 0;
             @Override
             public boolean onKey(View view, int i, KeyEvent keyEvent) {
                 if(keyEvent.getAction() == KeyEvent.ACTION_DOWN &&
                         (i == KeyEvent.KEYCODE_ENTER)){
-//                    qnt = etStoreMan.getText().toString();
+                    int entIndex;
+                    input = etQnt.getText().toString();
+                    Log.d(TAG, "Input =" + input);
+//                    etScan.getText().clear();
+                    Log.d(TAG, "After cleaning text length =" + etQnt.getText().toString().length());
+                    if (input.contains("\n")) {
+                        entIndex = input.indexOf("\n");
+                        Log.d(TAG, "Enter char index = " + entIndex);
+                        if (entIndex == 0) {
+                            input = input.substring(1);
+                        } else input = input.substring(0, entIndex);
+                    }
                     try {
-                        qnt = Integer.parseInt(etQnt.getText().toString());
-                        FL.d(TAG, "qnt = " + storeMan);
+                        qnt = Integer.parseInt(input);
+                        FL.d(TAG, "qnt = " + qnt);
                     } catch (NumberFormatException e) {
                         e.printStackTrace();
                         qnt = -1;
                     }
-                    if (qnt > 0 && qnt < 1000) {
+                    FL.d(TAG, "Insert storage =" + App.getStoreId() +
+                            " storeman=" + storeMan + " goods id =" + gp.id + " barcode =" + gp.barcode +
+                            " qnt =" + qnt + " cell =" + cell + " time =" + getCurrentTime());
+                    if (qnt > 0 && qnt < 10000) {
                         etQnt.setEnabled(false);
                         etScan.setEnabled(true);
                         etScan.requestFocus();
                         etScan.getText().clear();
                         tvPrompt.setText(getResources().getString(R.string.scan_goods));
-                        long scanTime = Config.toComttTime(System.currentTimeMillis());
-                        FL.d(TAG, "Insert storage =" + App.getStoreId() +
-                                " storeman=" + storeMan + " goods id =" + gp.id + " barcode =" + gp.barcode +
-                                " qnt =" + qnt + " cell =" + cell + " time =" + getCurrentTime());
-                        if (online) row = Database.insertAcceptGoods(App.getStoreId(), storeMan, gp.id, gp.barcode, qnt, cell, getCurrentTime());
+                        if (online) {
+                            row = Database.insertAcceptGoods(App.getStoreId(), storeMan, gp.id, gp.barcode, qnt, cell, getCurrentTime());
+                            FL.d(TAG, "Row " + row + " sent to server");
+                        }
                         if (row == 0) {
                             Database.addAcceptGoods(storeMan, gp.id, gp.barcode, qnt, cell, getCurrentTime());
+                            FL.d(TAG, "Sent to local DB");
                         }
+                        state = WAIT_GOODS_BARCODE;
                     } else {
                         etQnt.getText().clear();
                         say(getResources().getString(R.string.wrong_qnt));
+                        FL.d(TAG,getResources().getString(R.string.wrong_qnt) + " = " + qnt);
+                        etQnt.setText("");
+                        etQnt.requestFocus();
                     }
                 }
                 return false;
             }
         });
+        ad = new AlertDialog.Builder(this, R.style.MyAlertDialogTheme);
+        ad.setMessage(R.string.exit);
+        ad.setPositiveButton(R.string.yes,new DialogInterface.OnClickListener() {
+            public void onClick(DialogInterface dialog, int arg1) {
+                App.db.close();
+                finish();
+                System.exit(0);
+            }
+        });
+        ad.setNegativeButton(R.string.no,new DialogInterface.OnClickListener() {
+            public void onClick(DialogInterface dialog, int arg1) {
+
+            }
+        });
+        ad.setCancelable(false);
+        adScan = new AlertDialog.Builder(this, R.style.MyAlertDialogTheme);
+        adScan.setMessage(R.string.close_scan);
+        adScan.setPositiveButton(R.string.yes,new DialogInterface.OnClickListener() {
+            public void onClick(DialogInterface dialog, int arg1) {
+                state = WAIT_GOODS_BARCODE;
+                etQnt.setText("");
+                etScan.setText("");
+                tvCell.setText("");
+                tvDescription.setText("");
+                tvPrompt.setText(getResources().getString(R.string.scan_goods));
+                tvGoods.setText("");
+                etScan.setEnabled(true);
+                etScan.requestFocus();
+                etQnt.setEnabled(false);
+            }
+        });
+        adScan.setNegativeButton(R.string.no,new DialogInterface.OnClickListener() {
+            public void onClick(DialogInterface dialog, int arg1) {
+//                etScan.requestFocus();
+            }
+        });
+        adScan.setCancelable(false);
     }
     public static void say(String text) {
         if (Config.tts) mTTS.speak(text, TextToSpeech.QUEUE_ADD, null, null);
     }
     private void processScan(String scan) {
+        final String[]goodsDescriptions;
         Log.d(TAG, "Scanned " + scan);
         switch (state) {
-            case WAIT_INPUT_CELL:
-                if (CheckCode.checkCell(scan)) {
-                    tvInputCell.setText(Config.formatCell(scan));
-                    tvBoxLabel.setText(getResources().getString(R.string.input_cell_label));
-                    inputCell = scan;
-                    moveGoodsId = Database.addMoveGoods(App.getStoreId(), storeMan);
-                    /*
-                    fTrans = getSupportFragmentManager().beginTransaction();
-                    fTrans.replace(R.id.fragment_placeholder, fragment2);
-                    fTrans.commit();
-
-                     */
-                    state = WAIT_GOODS_CODE;
-                } else {
-                    say(getResources().getString(R.string.wrong_cell));
-                }
-                break;
-            case WAIT_OUTPUT_CELL:
-                if (CheckCode.checkCell(scan)) {
-                    outputCell = scan;
-                    state = WAIT_GOODS_CODE;
-                    addGoodsToCell(outputCell, goodsCode);
-                    if (updateMoveGoodsData) {
-                        Database.updateGoodsData(moveGoodsRow, moveGoodsId, goodsCode, inputCell, outputCell, Config.getQty(goodsCode));
-                        updateMoveGoodsData = false;
-                    } else {
-                        Database.addMoveGoodsData(moveGoodsId, goodsCode, inputCell, outputCell, Config.getQty(goodsCode));
-                    }
-                    /*
-                    fTrans = getSupportFragmentManager().beginTransaction();
-                    fTrans.replace(R.id.fragment_placeholder,fragment4);
-                    fTrans.commit();
-
-                     */
-                    getSupportFragmentManager().executePendingTransactions();
-                    BlankFragment4 f4 = (BlankFragment4) getSupportFragmentManager().findFragmentById(R.id.fragment_placeholder);
-                    if (f4 == null) Log.e(TAG, "Fragment4 not found");
-                    else {
-                        f4.setCell(Config.formatCell(scan));
-                    }
-                } else {
-                    say(getResources().getString(R.string.wrong_cell));
-                }
-                break;
-            case WAIT_GOODS_CODE:
-                if (CheckCode.checkGoods(scan)) {
-                    goodsCode = scan;
-                    moveGoodsRow = Database.findGoods(moveGoodsId,goodsCode);
-                    if (moveGoodsRow == 0) {    //unique code
-                        state = WAIT_OUTPUT_CELL;
-                        updateMoveGoodsData = false;
-                        /*
-                        fTrans = getSupportFragmentManager().beginTransaction();
-                        fTrans.replace(R.id.fragment_placeholder, fragment3);
-                        fTrans.commit();
-
-                         */
-                        getSupportFragmentManager().executePendingTransactions();
-                        BlankFragment3 f3 = (BlankFragment3) getSupportFragmentManager().findFragmentById(R.id.fragment_placeholder);
-                        if (f3 == null) Log.e(TAG, "Fragment3 not found");
-                        else {
-                            f3.setGoods(scan);
-                            f3.setQty(Config.getQty(scan));
-                        }
-                    } else {                //not unique code
-                        say(getResources().getString(R.string.repeat_scan));
-                        adbCell.create().show();
-                    }
-                } else {
-                    say(getResources().getString(R.string.wrong_goods));
-                }
-                break;
             case WAIT_GOODS_BARCODE:
                 gp = Database.getGoodsPosition(scan);
                 if (gp == null) {
-                    say(getResources().getString(R.string.wrong_goods));
+                    final GoodsPosition []searchResult = Database.searchGoods(input);
+                    if (searchResult != null && searchResult.length > 0){
+                        if (searchResult.length == 1) {
+                            gp = searchResult[0];
+                            etQnt.setText(String.valueOf(gp.qnt));
+                            tvGoods.setText(gp.barcode);
+                            tvCell.setText(gp.cell);
+                            tvDescription.setText(gp.description);
+                            tvPrompt.setText(getResources().getString(R.string.scan_cell));
+                            state = WAIT_CELL;
+                        } else {
+                            goodsDescriptions = new String[searchResult.length];
+                            for (int j = 0; j < searchResult.length; j++) {
+                                Log.d(TAG, "Goods code=" + searchResult[j].id + " desc=" + searchResult[j].description + " barcode=" + searchResult[j].barcode);
+                                goodsDescriptions[j] = searchResult[j].description;
+                            }
+                            adbGoods = new AlertDialog.Builder(this);
+                            adbGoods.setTitle(R.string.goods_choice).setItems(goodsDescriptions, new DialogInterface.OnClickListener(){
+                                public void onClick(DialogInterface dialog, int which) {
+                                    // The 'which' argument contains the index position
+                                    // of the selected item
+                                    FL.d(TAG, "Index = " + which + "goods=" + goodsDescriptions[which]);
+                                    gp = searchResult[which];
+                                    etQnt.setText(String.valueOf(gp.qnt));
+                                    tvGoods.setText(gp.barcode);
+                                    tvCell.setText(gp.cell);
+                                    tvDescription.setText(gp.description);
+                                    tvPrompt.setText(getResources().getString(R.string.scan_cell));
+                                    state = WAIT_CELL;
+                                }
+                            }).create().show();
+                        }
+                    } else {
+                        say(getResources().getString(R.string.wrong_goods));
+                    }
                 } else {
                     etQnt.setText(String.valueOf(gp.qnt));
                     tvGoods.setText(gp.barcode);
@@ -435,6 +408,7 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
                 break;
             case WAIT_CELL:
                 cell = scan;
+
                 if (CheckCode.checkCellStr(scan)){
                     int prefix, suffix;
                     String result;
@@ -452,6 +426,8 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
                     cell = result + c;
                     Log.d(TAG,"Manual input =" + scan + " cell =" + cell);
                 }
+
+
                 if (CheckCode.checkCell(cell)) {
 
                     etScan.setEnabled(false);
@@ -460,46 +436,17 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
                     etQnt.setSelection(etQnt.getText().length());
                     tvCell.setText(Config.formatCell(cell));
                     tvPrompt.setText(getResources().getString(R.string.qnt));
-                    state = WAIT_GOODS_BARCODE;
+                    state = WAIT_QNT;
                 } else say(getResources().getString(R.string.wrong_cell));
                 break;
             default:
                 Log.d(TAG,"WTF switch");
-                state = WAIT_GOODS_BARCODE;
+//                state = WAIT_GOODS_BARCODE;
 //                tvPrompt.setText(getResources().getString(R.string.scan_box));
                 break;
         }
     }
-    private void addGoodsToCell(String cellCode, String goodsCode) {
-        Log.d(TAG, "Add goods " + goodsCode + " to cell " + cellCode);
-    }
 
-    @Override
-    public void onClick(View view) {
-        FL.d(TAG, "Process button pressed");
-        view.setEnabled(false);
-        if (online) {
-            Database.transferMoveGoods();
-        } else {
-            say(getResources().getString(R.string.upload_deferred));
-        }
-        if (Database.getDataCount() < Config.maxDataCount) {
-            say(getResources().getString(R.string.storeman_number_tts));
-            etStoreMan.requestFocus();
-            state = WAIT_INPUT_CELL;
-            tvBoxLabel.setText("");
-            tvInputCell.setText("");
-            /*
-            fTrans = getSupportFragmentManager().beginTransaction();
-            fTrans.replace(R.id.fragment_placeholder,fragment1);
-            fTrans.commit();
-
-             */
-        } else {
-            say(getResources().getString(R.string.force_upload));
-            adbUpload.create().show();
-        }
-    }
     private BroadcastReceiver networkChangeReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
@@ -508,13 +455,13 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
                 FL.d(TAG,"Network " + cm.getActiveNetworkInfo().getExtraInfo() + " " + cm.getActiveNetworkInfo().getDetailedState());
                 phrase = "wifi подключен";
                 online = true;
-                Database.uploadGoods();
+//                Database.uploadGoods();
+                uploadGoods();
             } else {
                 FL.d(TAG, "Network disconnected");
                 phrase = "wifi отключен";
                 online = false;
             }
-//            say(phrase);
             Toast.makeText(context, phrase, Toast.LENGTH_LONG).show();
         }
     };
@@ -523,5 +470,99 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
         dateFormat.setTimeZone(TimeZone.getTimeZone("Asia/Yekaterinburg"));
         Date today = Calendar.getInstance().getTime();
         return dateFormat.format(today);
+    }
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        // TODO Add your menu entries here
+        getMenuInflater().inflate(R.menu.menu, menu);
+        return true;
+    }
+    @Override
+    public void onBackPressed() {
+        if (state == WAIT_GOODS_BARCODE || state == WAIT_GOODS_CODE) {
+            ad.show();
+            FL.d(TAG, "Exit");
+        }
+        if (state == WAIT_CELL || state == WAIT_QNT
+        ) {
+            FL.d(TAG, "Finish scan");
+            adScan.show();
+        }
+
+    }
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+
+        switch (item.getItemId()) {
+            case R.id.settings_item:
+                FL.d(TAG, "Settings clicked");
+                adbSettings = new AlertDialog.Builder(this);
+                adbSettings.setTitle(R.string.store_choice)
+                            .setItems(names, new DialogInterface.OnClickListener(){
+                                public void onClick(DialogInterface dialog, int which) {
+                                    // The 'which' argument contains the index position
+                                    // of the selected item
+                                    FL.d(TAG, "Index = " + which + " store id=" + ids[which]);
+                                    App.setStoreIndex(which);
+                                    App.setStoreId(ids[which]);
+                                    App.setStoreName(names[which]);
+                                }
+                            }).create().show();
+                return true;
+            case R.id.refresh_item:
+                FL.d(TAG, "Refresh clicked");
+                refreshData();
+                return true;
+            default:
+                break;
+        }
+        return false;
+    }
+    private void refreshData() {
+//        Database.getBarCodes(App.getStoreId());
+//        Database.getGoods(App.getStoreId());
+        RefreshData rd = new RefreshData();
+        rd.execute("");
+    }
+    public class RefreshData extends AsyncTask<String,String,String> {
+
+        @Override
+        protected String doInBackground(String... strings) {
+            Database.getBarCodes(App.getStoreId());
+            Database.getGoods(App.getStoreId());
+            return null;
+        }
+        @Override
+        protected void onPreExecute() {
+            FL.d(TAG, "Fetch inserted packs start");
+            pbbar.setVisibility(View.VISIBLE);
+        }
+        @Override
+        protected void onPostExecute(String r) {
+            pbbar.setVisibility(View.GONE);
+        }
+    }
+    private void uploadGoods() {
+//        Database.getBarCodes(App.getStoreId());
+//        Database.getGoods(App.getStoreId());
+        UploadGoods ug = new UploadGoods();
+        ug.execute("");
+    }
+    public class UploadGoods extends AsyncTask<String,String,String> {
+
+        @Override
+        protected String doInBackground(String... strings) {
+            Database.uploadGoods();
+            return null;
+        }
+        @Override
+        protected void onPreExecute() {
+            FL.d(TAG, "Fetch inserted packs start");
+            pbbar.setVisibility(View.VISIBLE);
+        }
+        @Override
+        protected void onPostExecute(String r) {
+            pbbar.setVisibility(View.GONE);
+        }
     }
 }

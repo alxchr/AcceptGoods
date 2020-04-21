@@ -1,7 +1,6 @@
-package ru.abch.acceptgoods;
+package ru.abch.acceptgoods2;
 
 import android.util.ArrayMap;
-import android.util.Log;
 
 public class Config {
     public static final String db = "RCall";

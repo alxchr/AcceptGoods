@@ -1,4 +1,4 @@
-package ru.abch.acceptgoods;
+package ru.abch.acceptgoods2;
 
 import android.os.StrictMode;
 import android.util.Log;
@@ -7,11 +7,11 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
 
-import static ru.abch.acceptgoods.Config.classs;
-import static ru.abch.acceptgoods.Config.db;
-import static ru.abch.acceptgoods.Config.ip;
-import static ru.abch.acceptgoods.Config.password;
-import static ru.abch.acceptgoods.Config.un;
+import static ru.abch.acceptgoods2.Config.classs;
+import static ru.abch.acceptgoods2.Config.db;
+import static ru.abch.acceptgoods2.Config.ip;
+import static ru.abch.acceptgoods2.Config.password;
+import static ru.abch.acceptgoods2.Config.un;
 
 public class ConnectionClass {
     public Connection CONN() {

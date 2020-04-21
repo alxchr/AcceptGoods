@@ -1,4 +1,4 @@
-package ru.abch.acceptgoods;
+package ru.abch.acceptgoods2;
 
 public class CheckCode {
     /*
@@ -9,7 +9,7 @@ public class CheckCode {
      */
     private static String cellNumber = "19\\w+";
     private static String goodsCode = "28\\w+";
-    private static String cell = "\\d+.\\d+";
+    private static String cell = "\\d+\\.\\d+";
     /*
     public static boolean checkCode(String code){
         return code.matches(scanPattern);
