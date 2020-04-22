@@ -20,6 +20,8 @@ import android.net.ConnectivityManager;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.speech.tts.TextToSpeech;
+import android.text.Editable;
+import android.text.TextWatcher;
 import android.util.Log;
 import android.view.KeyEvent;
 import android.view.Menu;
@@ -185,6 +187,7 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
             }
         });
         etStoreMan.requestFocus();
+/*
         etScan.setOnKeyListener(new View.OnKeyListener() {
             @Override
             public boolean onKey(View view, int i, KeyEvent keyEvent) {
@@ -202,12 +205,58 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
                             input = input.substring(1);
                         } else input = input.substring(0, entIndex);
                     }
-                    if (input.length() > 2) processScan(input);
-                    else say(getResources().getString(R.string.enter_again));
+                    if (input.length() > 2) {
+                        processScan(input);
+                    }
+                    else {
+                        say(getResources().getString(R.string.enter_again));
+                    }
                 }
                 return false;
             }
         });
+
+   */
+
+        etScan.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence charSequence, int i, int i1, int i2) {
+
+            }
+
+            @Override
+            public void onTextChanged(CharSequence charSequence, int i, int i1, int i2) {
+                Log.d(TAG, "On text changed =" + charSequence);
+            }
+
+            @Override
+            public void afterTextChanged(Editable editable) {
+                String input;
+                int entIndex;
+                if(editable.length() > 2) {
+                    input = editable.toString();
+//                    Log.d(TAG, "After text changed =" + editable.toString());
+                    if (input.contains("\n") && input.indexOf("\n") == 0) {
+                        input = input.substring(1);
+//                        Log.d(TAG, "Enter char begins string =" + input);
+                    }
+                    if (input.contains("\n") && input.indexOf("\n") > 0) {
+                        entIndex = input.indexOf("\n");
+                        input = input.substring(0, entIndex);
+//                        Log.d(TAG, "Enter at " + entIndex + " position of input =" + input);
+                        if (input.length() > 2) {
+                            etScan.setEnabled(false);
+                            processScan(input);
+                            etScan.setEnabled(true);
+                        } else {
+                            say(getResources().getString(R.string.enter_again));
+                        }
+                        etScan.setText("");
+                    }
+                }
+            }
+        });
+
 
         cm = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
         cm.addDefaultNetworkActiveListener(new ConnectivityManager.OnNetworkActiveListener() {
@@ -362,12 +411,12 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
             case WAIT_GOODS_BARCODE:
                 gp = Database.getGoodsPosition(scan);
                 if (gp == null) {
-                    final GoodsPosition []searchResult = Database.searchGoods(input);
+                    final GoodsPosition []searchResult = Database.searchGoods(scan);
                     if (searchResult != null && searchResult.length > 0){
                         if (searchResult.length == 1) {
                             gp = searchResult[0];
                             etQnt.setText(String.valueOf(gp.qnt));
-                            tvGoods.setText(gp.barcode);
+                            tvGoods.setText(gp.article);
                             tvCell.setText(gp.cell);
                             tvDescription.setText(gp.description);
                             tvPrompt.setText(getResources().getString(R.string.scan_cell));
@@ -386,7 +435,7 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
                                     FL.d(TAG, "Index = " + which + "goods=" + goodsDescriptions[which]);
                                     gp = searchResult[which];
                                     etQnt.setText(String.valueOf(gp.qnt));
-                                    tvGoods.setText(gp.barcode);
+                                    tvGoods.setText(gp.article);
                                     tvCell.setText(gp.cell);
                                     tvDescription.setText(gp.description);
                                     tvPrompt.setText(getResources().getString(R.string.scan_cell));
@@ -399,7 +448,7 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
                     }
                 } else {
                     etQnt.setText(String.valueOf(gp.qnt));
-                    tvGoods.setText(gp.barcode);
+                    tvGoods.setText(gp.article);
                     tvCell.setText(gp.cell);
                     tvDescription.setText(gp.description);
                     tvPrompt.setText(getResources().getString(R.string.scan_cell));
@@ -426,10 +475,7 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
                     cell = result + c;
                     Log.d(TAG,"Manual input =" + scan + " cell =" + cell);
                 }
-
-
                 if (CheckCode.checkCell(cell)) {
-
                     etScan.setEnabled(false);
                     etQnt.setEnabled(true);
                     etQnt.requestFocus();
@@ -441,8 +487,6 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
                 break;
             default:
                 Log.d(TAG,"WTF switch");
-//                state = WAIT_GOODS_BARCODE;
-//                tvPrompt.setText(getResources().getString(R.string.scan_box));
                 break;
         }
     }

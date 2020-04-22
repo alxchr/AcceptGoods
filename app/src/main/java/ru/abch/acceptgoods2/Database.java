@@ -24,7 +24,7 @@ import java.util.Date;
 public class Database {
     static  String TAG = "Database";
     private static final String DB_NAME = "goodsdb";
-    private static final int DB_VERSION = 2;
+    private static final int DB_VERSION = 3;
     private static final String DB_TABLE_MOVEGOODS = "movegoods";
     private static final String DB_TABLE_MOVEGOODS_DATA = "movegoodsdata";
     private static final String DB_TABLE_BARCODES = "barcodes";
@@ -42,7 +42,8 @@ public class Database {
     private static final String COLUMN_QNT  = "qnt";
     private static final String COLUMN_MOVEGOODS_SCAN_TIME = "scan_time";
     private static final String COLUMN_BARCODE  = "barcode";
-    static final String COLUMN_GOODS_DESC = "goods_desc";
+    private static final String COLUMN_GOODS_DESC = "goods_desc";
+    private static final String COLUMN_GOODS_ARTICLE = "goods_article";
 
     private static final String DB_CREATE_MOVEGOODS =
             "create table " + DB_TABLE_MOVEGOODS + "(" +
@@ -73,7 +74,9 @@ public class Database {
             COLUMN_ID + " integer primary key autoincrement, " +
                     COLUMN_GOODS_CODE + " text not null, " +
                     COLUMN_GOODS_DESC + " text not null, " +
-                    COLUMN_OUTPUT_CELL + " text " +
+                    COLUMN_OUTPUT_CELL + " text, " +
+                    COLUMN_GOODS_ARTICLE + " text, " +
+                    COLUMN_QNT + " integer " +
                     ");";
     private static final String DB_CREATE_ADDGOODS =
             "create table " + DB_TABLE_ADDGOODS + "(" +
@@ -136,10 +139,27 @@ public class Database {
         @Override
         public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
             Log.d(TAG, "Upgrade DB from " + oldVersion + " to " + newVersion);
+            String dropAddGoods = "drop table if exists " + DB_TABLE_ADDGOODS;
+            String dropMoveGoods = "drop table if exists " + DB_TABLE_MOVEGOODS;
+            String dropMoveGoodsData = "drop table if exists " + DB_TABLE_MOVEGOODS_DATA;
+            String dropGoods = "drop table if exists " + DB_TABLE_GOODS;
+            String dropBarcodes = "drop table if exists " + DB_TABLE_BARCODES;
             if (oldVersion == 1 && newVersion == 2) db.execSQL(DB_CREATE_BARCODES);
-
+            if (newVersion > 2) {
+                db.execSQL(dropAddGoods);
+                db.execSQL(dropMoveGoods);
+                db.execSQL(dropMoveGoodsData);
+                db.execSQL(dropGoods);
+                db.execSQL(dropBarcodes);
+                db.execSQL(DB_CREATE_MOVEGOODS);
+                db.execSQL(DB_CREATE_MOVEGOODS_DATA);
+                db.execSQL(DB_CREATE_BARCODES);
+                db.execSQL(DB_CREATE_GOODS);
+                db.execSQL(DB_CREATE_ADDGOODS);
+            }
         }
     }
+    /*
     public static long addMoveGoods(String warehouse, int storeman) {
         long ret = 0;
         ContentValues cv = new ContentValues();
@@ -169,13 +189,16 @@ public class Database {
         }
         return ret;
     }
+
+     */
     public static void clearData() {
         mDB.delete(DB_TABLE_MOVEGOODS_DATA,null,null);
-        mDB.delete(DB_TABLE_MOVEGOODS,null,null);
+        mDB.delete(DB_TABLE_ADDGOODS,null,null);
         mDB.delete(DB_TABLE_BARCODES, null, null);
         mDB.delete(DB_TABLE_GOODS, null, null);
         FL.d(TAG,"Clear tables");
     }
+    /*
     public static Date getStartOfDay(Date date) {
         Calendar calendar = Calendar.getInstance();
         int year = calendar.get(Calendar.YEAR);
@@ -184,6 +207,7 @@ public class Database {
         calendar.set(year, month, day, 0, 0, 0);
         return calendar.getTime();
     }
+
     public static void transferMoveGoods() {
         FL.d(TAG, "Transfer move goods");
         Connection con;
@@ -267,6 +291,8 @@ public class Database {
         c.close();
         clearData();
     }
+
+
     public static long findGoods(long moveGoodsId, String goods) {
         long ret = 0;
         Cursor c = mDB.query(DB_TABLE_MOVEGOODS_DATA,null,COLUMN_MOVEGOODS_ID + "=? and " + COLUMN_GOODS_CODE + "=?",
@@ -292,6 +318,8 @@ public class Database {
         c1.close();
         return ret;
     }
+
+     */
     public static long addBarCode(String goodsCode, String barCode, int qnt) {
         long ret = 0;
         ContentValues cv = new ContentValues();
@@ -330,12 +358,14 @@ public class Database {
             e.printStackTrace();
         }
     }
-    public static long addGoods(String goodsCode, String desc, String cell) {
+    public static long addGoods(String goodsCode, String desc, String cell, String article, int total) {
         long ret = 0;
         ContentValues cv = new ContentValues();
         cv.put(COLUMN_GOODS_CODE, goodsCode);
         cv.put(COLUMN_GOODS_DESC, desc);
         cv.put(COLUMN_OUTPUT_CELL, cell);
+        cv.put(COLUMN_GOODS_ARTICLE, article);
+        cv.put(COLUMN_QNT, total);
         try {
             ret = mDB.insert(DB_TABLE_GOODS, null, cv);
         }  catch (SQLiteException ex) {
@@ -358,8 +388,10 @@ public class Database {
                     String goodsCode = rs.getString(1);
                     String desc = rs.getString(3);
                     String cell = rs.getString(7);
-                    Log.d(TAG, "Goods code =" + goodsCode + " desc = " + desc + " cell = " + cell);
-                    addGoods(goodsCode, desc, cell);
+                    String article = rs.getString(4);
+                    int total = rs.getInt(2);
+                    Log.d(TAG, "Goods code =" + goodsCode + " desc = " + desc + " cell = " + cell + " article = " + article + " total = " + total);
+                    addGoods(goodsCode, desc, cell, article, total);
                 }
                 mDB.setTransactionSuccessful();
                 mDB.endTransaction();
@@ -371,10 +403,10 @@ public class Database {
     public static GoodsPosition getGoodsPosition(String barcode) {
         GoodsPosition ret = null;
         String goodsCode;
-        int qnt;
+        int qnt, total;
         String barcodeTable = DB_TABLE_BARCODES;
         String goodsTable = DB_TABLE_GOODS;
-        String description, cell;
+        String description, cell, article;
         Log.d(TAG, "Goods position barcode = " + barcode);
         Cursor c = mDB.query( barcodeTable, null,COLUMN_BARCODE + "=?", new String[]{barcode},
                 null, null, null, null );
@@ -387,7 +419,9 @@ public class Database {
             if (cGoods.moveToFirst()) {
                 description = cGoods.getString(2);
                 cell = cGoods.getString(3);
-                ret = new GoodsPosition(goodsCode, barcode, description, cell, qnt);
+                total = cGoods.getInt(5);
+                article = cGoods.getString(4);
+                ret = new GoodsPosition(goodsCode, barcode, description, cell, qnt, article, total);
                 Log.d(TAG, "Found goods position desc = " + description + " cell = " + cell);
             }
         }
@@ -451,10 +485,11 @@ public class Database {
     }
     public static GoodsPosition[] searchGoods(String searchPattern) {
         GoodsPosition[] ret = null;
-        int qnt;
-        String goodsCode, description, cell, barcode;
-        Cursor c = mDB.query( true, DB_TABLE_GOODS, new String[] {COLUMN_GOODS_CODE, COLUMN_GOODS_DESC, COLUMN_OUTPUT_CELL}, COLUMN_GOODS_DESC + " like ?", new String[] {"%" + searchPattern + "%"},
-                null, null, null, null);
+        int qnt, total;
+        String goodsCode, description, cell, barcode, article;
+        Cursor c = mDB.query( true, DB_TABLE_GOODS, new String[] {COLUMN_GOODS_CODE, COLUMN_GOODS_DESC, COLUMN_OUTPUT_CELL, COLUMN_GOODS_ARTICLE, COLUMN_QNT},
+                COLUMN_GOODS_DESC + " like ? or " + COLUMN_GOODS_ARTICLE + " like ? COLLATE NOCASE",
+                new String[] {"%" + searchPattern + "%","%" + searchPattern + "%"},null, null, null, null);
         int count = c.getCount();
         Log.d(TAG, "Found " + count + " rows for " + searchPattern);
         if (count > 0) {
@@ -475,10 +510,14 @@ public class Database {
 //                    Log.d(TAG, "Id =" + id + " barcode =" + barcode + " qnt=" + qnt);
                 }
                 cell = c.getString(2);
-                GoodsPosition gp = new GoodsPosition(goodsCode,barcode, description, cell, qnt);
+                article = c.getString(3);
+                total = c.getInt(4);
+                GoodsPosition gp = new GoodsPosition(goodsCode,barcode, description, cell, qnt, article, total);
                 ret[i] = gp;
                 c.moveToNext();
+                c1.close();
             }
+            c.close();
         }
         return ret;
     }
