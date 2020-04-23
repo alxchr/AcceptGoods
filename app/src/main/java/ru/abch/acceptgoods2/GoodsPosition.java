@@ -1,7 +1,7 @@
 package ru.abch.acceptgoods2;
 
 public class GoodsPosition {
-    String barcode, description, cell, id, article;
+    String barcode, description, cell, id, article, time;
     int qnt, total;
     GoodsPosition(String id, String barcode, String description, String cell, int qnt, String article, int total){
         this.barcode = barcode;
@@ -11,6 +11,7 @@ public class GoodsPosition {
         this.id = id;
         this.article = article;
         this.total = total;
+        this.time = "";
     }
 
     public String getId() {
@@ -31,5 +32,21 @@ public class GoodsPosition {
 
     public String getCell() {
         return cell;
+    }
+
+    void setCell(String cell) {
+        this.cell = cell;
+    }
+
+    public void setTime(String time) {
+        this.time = time;
+    }
+
+    public String getTime() {
+        return time;
+    }
+
+    public void setQnt(int qnt) {
+        this.qnt = qnt;
     }
 }

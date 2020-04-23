@@ -46,13 +46,13 @@ import java.util.TimeZone;
 
 public class MainActivity extends AppCompatActivity implements TextToSpeech.OnInitListener{
     AlertDialog.Builder adbSettings, adbError, adbUpload;
-    private String TAG = "MainActivity";
+    private static String TAG = "MainActivity";
     private static final int REQ_PERMISSION = 1233;
     private static TextToSpeech mTTS;
     TextView tvStore;
-    EditText etStoreMan;
+    static  EditText etStoreMan;
     String sStoreMan;
-    int storeMan;
+    static int storeMan;
     TextView  tvPrompt, tvBoxLabel, tvDescription, tvCell, tvGoods;
     EditText etScan, etQnt;
     private String input;
@@ -74,7 +74,7 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
     AlertDialog.Builder ad, adScan, adbGoods;
     final String[] storeCode = new String[] {"1908","1909","1907","1901","1900","1902","1906","1904","1903","1905","1900","1900","1900","1900","1900"};
     String[] names;
-    ProgressBar pbbar;
+    static ProgressBar pbbar;
     @Override
     protected void onResume() {
         super.onResume();
@@ -187,37 +187,6 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
             }
         });
         etStoreMan.requestFocus();
-/*
-        etScan.setOnKeyListener(new View.OnKeyListener() {
-            @Override
-            public boolean onKey(View view, int i, KeyEvent keyEvent) {
-                if(keyEvent.getAction() == KeyEvent.ACTION_DOWN && (i == KeyEvent.KEYCODE_ENTER)) {
-                    int entIndex;
-                    Log.d(TAG, "Before cleaning text length =" + etScan.getText().toString().length());
-                    input = etScan.getText().toString();
-                    Log.d(TAG, "Input =" + input);
-                    etScan.getText().clear();
-                    Log.d(TAG, "After cleaning text length =" + etScan.getText().toString().length());
-                    if (input.contains("\n")) {
-                        entIndex = input.indexOf("\n");
-                        Log.d(TAG, "Enter char index = " + entIndex);
-                        if (entIndex == 0) {
-                            input = input.substring(1);
-                        } else input = input.substring(0, entIndex);
-                    }
-                    if (input.length() > 2) {
-                        processScan(input);
-                    }
-                    else {
-                        say(getResources().getString(R.string.enter_again));
-                    }
-                }
-                return false;
-            }
-        });
-
-   */
-
         etScan.addTextChangedListener(new TextWatcher() {
             @Override
             public void beforeTextChanged(CharSequence charSequence, int i, int i1, int i2) {
@@ -344,10 +313,13 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
                         etScan.getText().clear();
                         tvPrompt.setText(getResources().getString(R.string.scan_goods));
                         if (online) {
-                            row = Database.insertAcceptGoods(App.getStoreId(), storeMan, gp.id, gp.barcode, qnt, cell, getCurrentTime());
-                            FL.d(TAG, "Row " + row + " sent to server");
-                        }
-                        if (row == 0) {
+//                            row = Database.insertAcceptGoods(App.getStoreId(), storeMan, gp.id, gp.barcode, qnt, cell, getCurrentTime());
+//                            FL.d(TAG, "Row " + row + " sent to server");
+                            gp.setQnt(qnt);
+                            gp.setCell(cell);
+                            gp.setTime(getCurrentTime());
+                            uploadGoodsPosition(gp);
+                        } else {
                             Database.addAcceptGoods(storeMan, gp.id, gp.barcode, qnt, cell, getCurrentTime());
                             FL.d(TAG, "Sent to local DB");
                         }
@@ -592,11 +564,12 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
         UploadGoods ug = new UploadGoods();
         ug.execute("");
     }
-    public class UploadGoods extends AsyncTask<String,String,String> {
+    public static class UploadGoods extends AsyncTask<String,String,String> {
 
         @Override
         protected String doInBackground(String... strings) {
             Database.uploadGoods();
+            Database.clearData();
             return null;
         }
         @Override
@@ -607,6 +580,37 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
         @Override
         protected void onPostExecute(String r) {
             pbbar.setVisibility(View.GONE);
+        }
+    }
+    private void uploadGoodsPosition(GoodsPosition gp) {
+        UploadGoodsPosition ugp = new UploadGoodsPosition();
+        ugp.execute(gp);
+    }
+    public static class UploadGoodsPosition extends AsyncTask<GoodsPosition,String,String> {
+        boolean success;
+        GoodsPosition goodsPosition;
+
+        @Override
+        protected String doInBackground(GoodsPosition... gp) {
+            goodsPosition = gp[0];
+            success = Database.insertGoodsPosition(App.getStoreId(), storeMan, goodsPosition);
+            return null;
+        }
+        @Override
+        protected void onPreExecute() {
+            FL.d(TAG, "Start upload goods position");
+            success = false;
+            pbbar.setVisibility(View.VISIBLE);
+        }
+        @Override
+        protected void onPostExecute(String r) {
+            pbbar.setVisibility(View.GONE);
+            if (!success) {
+                FL.d(TAG, "Save to local DB gp.id =" + goodsPosition.getId());
+                Database.addAcceptGoods(storeMan, goodsPosition.getId(), goodsPosition.getBarcode(), goodsPosition.getQnt(), goodsPosition.getCell(), getCurrentTime());
+            } else {
+                FL.d(TAG, "Successful upload goods position");
+            }
         }
     }
 }

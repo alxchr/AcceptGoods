@@ -15,14 +15,10 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.Statement;
-import java.text.DateFormat;
-import java.text.SimpleDateFormat;
 import java.util.Arrays;
-import java.util.Calendar;
-import java.util.Date;
 
 public class Database {
-    static  String TAG = "Database";
+    private static  String TAG = "Database";
     private static final String DB_NAME = "goodsdb";
     private static final int DB_VERSION = 3;
     private static final String DB_TABLE_MOVEGOODS = "movegoods";
@@ -91,13 +87,13 @@ public class Database {
     private final Context mCtx;
     private DBHelper mDBHelper;
     private static SQLiteDatabase mDB;
-    private static DateFormat dateFormat = new SimpleDateFormat("dd/MM/yyyy HH:mm");
+//    private static DateFormat dateFormat = new SimpleDateFormat("dd/MM/yyyy HH:mm");
     private static ConnectionClass connectionClass;
-    public Database(Context ctx) {
+    Database(Context ctx) {
         mCtx = ctx;
     }
 
-    public void open() {
+    void open() {
         mDBHelper = new DBHelper(mCtx, DB_NAME, null, DB_VERSION);
         try {
             mDB = mDBHelper.getWritableDatabase();
@@ -106,7 +102,7 @@ public class Database {
             new Exception("Error with DB Open");
         }
     }
-    public void close() {
+    void close() {
         if (mDBHelper!=null) mDBHelper.close();
     }
 
@@ -191,136 +187,15 @@ public class Database {
     }
 
      */
-    public static void clearData() {
+    static void clearData() {
         mDB.delete(DB_TABLE_MOVEGOODS_DATA,null,null);
-        mDB.delete(DB_TABLE_ADDGOODS,null,null);
+//        mDB.delete(DB_TABLE_ADDGOODS,null,null);
         mDB.delete(DB_TABLE_BARCODES, null, null);
         mDB.delete(DB_TABLE_GOODS, null, null);
         FL.d(TAG,"Clear tables");
     }
-    /*
-    public static Date getStartOfDay(Date date) {
-        Calendar calendar = Calendar.getInstance();
-        int year = calendar.get(Calendar.YEAR);
-        int month = calendar.get(Calendar.MONTH);
-        int day = calendar.get(Calendar.DATE);
-        calendar.set(year, month, day, 0, 0, 0);
-        return calendar.getTime();
-    }
 
-    public static void transferMoveGoods() {
-        FL.d(TAG, "Transfer move goods");
-        Connection con;
-        String[] generatedColumns = new String[] { "rowid" };
-        PreparedStatement stmtInsert;
-        Statement stmtInsertData;
-        ResultSet rs1;
-        String insertSQL1 = "insert into dbo.dctRcvMoveGoods(storage,storeman,in1c) values ('";
-        String insertSQL2 = "insert into dbo.dctRcvMoveGoodsData(rowid,shipbarcode,celloutbarcode,cellinbarcode,qnt) values (";
-        String query;
-        long id = 0;
-        Cursor c = mDB.query(DB_TABLE_MOVEGOODS,null,null,null,null,null,null);
-        if (c.getCount() > 0) {
-            Log.d(TAG, DB_TABLE_MOVEGOODS + " : cursor count = " + c.getCount());
-            while (c.moveToNext()) {
-                id = c.getLong(0);
-                Log.d(TAG, "Id = " + id +" time = " + c.getLong(4));
-                Cursor c1 = mDB.query(DB_TABLE_MOVEGOODS_DATA, null, COLUMN_MOVEGOODS_ID + "=?", new String[] {String.valueOf(id),},
-                        null, null, null);
-                if (c1.getCount() > 0) {
-                    con = connectionClass.CONN();
-
-                    Log.d(TAG, DB_TABLE_MOVEGOODS_DATA + " : cursor count = " + c1.getCount() + " movegoods id = " + id);
-                    if (con == null) {
-                        FL.e(TAG, "SQL server not connected");
-                    } else
-                    try {
-//                        con.setAutoCommit(false);
-                        query = insertSQL1 + c.getString(1) + "','" + c.getString(2) + "',0);";
-                        FL.d(TAG, "Query = " + query);
-                        stmtInsert  = con.prepareStatement(query, generatedColumns);
-                        int affectedRows = stmtInsert.executeUpdate();
-
-                        if (affectedRows == 0) {
-                            throw new SQLException("no rows affected.");
-                        }
-                        rs1 = stmtInsert.getGeneratedKeys();
-                        if (rs1.next()) {
-                            id = rs1.getLong(1);
-                            Log.d(TAG,"Inserted ID = " + id);
-                        }
-                        stmtInsert.close();
-                        rs1.close();
-                    } catch (java.sql.SQLException e) {
-                        e.printStackTrace();
-                    }
-                    if (con == null) {
-                        FL.e(TAG, "SQL server not connected");
-                    } else
-                    if (id > 0) {
-                        while (c1.moveToNext()) {
-                            try {
-                                query = insertSQL2 + id +",'" + c1.getString(2) + "','" + c1.getString(3) + "','" + c1.getString(4) + "'," + c1.getInt(5) + ");";
-                                FL.d(TAG, "Query = " + query);
-//                                stmtInsertData = con.prepareStatement(query);
-                                stmtInsertData = con.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE,ResultSet.CONCUR_READ_ONLY);
-                                stmtInsertData.executeUpdate(query);
-                                stmtInsertData.close();
-                            } catch (java.sql.SQLException e) {
-                                e.printStackTrace();
-                            }
-                        }
-                    }
-
-                    try {
-//                        con.commit();
-                        con.close();
-                    } catch (java.sql.SQLException e) {
-                        e.printStackTrace();
-                    }
-
-
-                } else {
-                    Log.d(TAG, DB_TABLE_MOVEGOODS_DATA +" : empty cursor");
-                }
-                c1.close();
-            }
-        } else {
-            Log.d(TAG, DB_TABLE_MOVEGOODS +" : empty cursor");
-        }
-        c.close();
-        clearData();
-    }
-
-
-    public static long findGoods(long moveGoodsId, String goods) {
-        long ret = 0;
-        Cursor c = mDB.query(DB_TABLE_MOVEGOODS_DATA,null,COLUMN_MOVEGOODS_ID + "=? and " + COLUMN_GOODS_CODE + "=?",
-                new String[] {String.valueOf(moveGoodsId),goods},null,null,null);
-        if (c.moveToNext()) ret = c.getLong(0);
-        return ret;
-    }
-    public static long updateGoodsData(long row, long id, String goodsCode, String inputCell, String outputCell, int qnt) {
-        ContentValues cv = new ContentValues();
-        cv.put(COLUMN_MOVEGOODS_ID,id);
-        cv.put(COLUMN_INPUT_CELL,inputCell);
-        cv.put(COLUMN_OUTPUT_CELL,outputCell);
-        cv.put(COLUMN_QNT,qnt);
-        cv.put(COLUMN_GOODS_CODE,goodsCode);
-        Log.d(TAG,"Update row "+ row + " id " + id + " goods " + goodsCode + " box " + inputCell + " cell " + outputCell + " qnt " + qnt);
-        return mDB.update(DB_TABLE_MOVEGOODS_DATA, cv, COLUMN_ID + "=?", new String[]{String.valueOf(row)});
-    }
-    public static int getDataCount() {
-        int ret;
-        Cursor c1 = mDB.query(DB_TABLE_MOVEGOODS_DATA, null, null, null,
-                null, null, null);
-        ret = c1.getCount();
-        c1.close();
-        return ret;
-    }
-
-     */
-    public static long addBarCode(String goodsCode, String barCode, int qnt) {
+    private static long addBarCode(String goodsCode, String barCode, int qnt) {
         long ret = 0;
         ContentValues cv = new ContentValues();
         cv.put(COLUMN_GOODS_CODE, goodsCode);
@@ -333,7 +208,7 @@ public class Database {
         }
         return ret;
     }
-    public static void getBarCodes (String storeID) {
+    static void getBarCodes(String storeID) {
         Connection con = connectionClass.CONN();;
         String SQL = "exec spr.dbo.dctGetAcceptGoodsData 2,'" + storeID + "';";
         Log.d(TAG, "Get bar codes for "+ storeID);
@@ -358,7 +233,7 @@ public class Database {
             e.printStackTrace();
         }
     }
-    public static long addGoods(String goodsCode, String desc, String cell, String article, int total) {
+    private static long addGoods(String goodsCode, String desc, String cell, String article, int total) {
         long ret = 0;
         ContentValues cv = new ContentValues();
         cv.put(COLUMN_GOODS_CODE, goodsCode);
@@ -373,7 +248,7 @@ public class Database {
         }
         return ret;
     }
-    public static void getGoods (String storeID) {
+    static void getGoods(String storeID) {
         Connection con = connectionClass.CONN();;
         String SQL = "exec spr.dbo.dctGetAcceptGoodsData 1,'" + storeID + "';";
         Log.d(TAG, "Get goods for "+ storeID);
@@ -400,7 +275,7 @@ public class Database {
             e.printStackTrace();
         }
     }
-    public static GoodsPosition getGoodsPosition(String barcode) {
+    static GoodsPosition getGoodsPosition(String barcode) {
         GoodsPosition ret = null;
         String goodsCode;
         int qnt, total;
@@ -427,7 +302,7 @@ public class Database {
         }
         return ret;
     }
-    public static long insertAcceptGoods(String storage, int storeman, String goodsId, String barcode, int qnt, String cell, String time) {
+    private static long insertAcceptGoods(String storage, int storeman, String goodsId, String barcode, int qnt, String cell, String time) {
         String insert = "insert into dbo.dctRcvAcceptGoods(storage,storeman,goods,goodsbarcode,qnt,cellinbarcode,scandt) values ('";
         String query = insert + storage + "'," + storeman + ",'" + goodsId + "','" + barcode + "'," + qnt + ",'" + cell +"','" + time +"');";
         FL.d(TAG, "Query =" + query);
@@ -441,7 +316,7 @@ public class Database {
             stmtInsert  = con.prepareStatement(query, generatedColumns);
             int affectedRows = stmtInsert.executeUpdate();
             if (affectedRows == 0) {
-                throw new SQLException("no rows affected.");
+                FL.d(TAG, "Row not inserted");
             }
             rs = stmtInsert.getGeneratedKeys();
             if (rs.next()) {
@@ -450,12 +325,13 @@ public class Database {
             }
             stmtInsert.close();
             rs.close();
+            con.close();
         } catch (java.sql.SQLException e) {
             e.printStackTrace();
         }
         return ret;
     }
-    public static long addAcceptGoods(int storeman, String goodsId, String barcode, int qnt, String cell, String datetime) {
+    static long addAcceptGoods(int storeman, String goodsId, String barcode, int qnt, String cell, String datetime) {
         long ret = 0;
         ContentValues cv = new ContentValues();
         cv.put(COLUMN_STOREMAN,storeman);
@@ -471,7 +347,26 @@ public class Database {
         }
         return ret;
     }
-    public static void uploadGoods(){
+    /*
+    public static long addAcceptGoods(int storeman, GoodsPosition gp) {
+        long ret = 0;
+        ContentValues cv = new ContentValues();
+        cv.put(COLUMN_STOREMAN,storeman);
+        cv.put(COLUMN_GOODS_CODE,gp.getId());
+        cv.put(COLUMN_BARCODE, gp.getBarcode());
+        cv.put(COLUMN_QNT, gp.getQnt());
+        cv.put(COLUMN_INPUT_CELL, gp.getCell());
+        cv.put(COLUMN_MOVEGOODS_SCAN_TIME, gp.getTime());
+        try {
+            ret = mDB.insert(DB_TABLE_ADDGOODS, null, cv);
+        }  catch (SQLiteException ex) {
+            FL.e(TAG, Arrays.toString(ex.getStackTrace()));
+        }
+        return ret;
+    }
+
+     */
+    static void uploadGoods(){
         Cursor c = mDB.query(DB_TABLE_ADDGOODS, null, null, null, null, null, null);
         int n = c.getCount();
         if (n > 0) {
@@ -483,7 +378,7 @@ public class Database {
         c.close();
         mDB.delete(DB_TABLE_ADDGOODS, null, null);
     }
-    public static GoodsPosition[] searchGoods(String searchPattern) {
+    static GoodsPosition[] searchGoods(String searchPattern) {
         GoodsPosition[] ret = null;
         int qnt, total;
         String goodsCode, description, cell, barcode, article;
@@ -521,4 +416,81 @@ public class Database {
         }
         return ret;
     }
+    static boolean insertGoodsPosition(String storage, int storeman, GoodsPosition gp) {
+        boolean ret = false;
+        String insert = "insert into dbo.dctRcvAcceptGoods(storage,storeman,goods,goodsbarcode,qnt,cellinbarcode,scandt) values ('";
+        String query = insert + storage + "'," + storeman + ",'" + gp.getId() + "','" + gp.getBarcode() + "'," + gp.getQnt() + ",'" + gp.getCell() +"','" + gp.getTime() +"');";
+        FL.d(TAG, "Query =" + query);
+        Connection con;
+        String[] generatedColumns = new String[] { "rowid" };
+        PreparedStatement stmtInsert;
+        con = connectionClass.CONN();
+        ResultSet rs;
+        long row;
+        try {
+            stmtInsert  = con.prepareStatement(query, generatedColumns);
+            int affectedRows = stmtInsert.executeUpdate();
+            if (affectedRows == 0) {
+                FL.d(TAG, "Row not inserted");
+            }
+            rs = stmtInsert.getGeneratedKeys();
+            if (rs.next()) {
+                row = rs.getLong(1);
+                Log.d(TAG,"Inserted ID = " + row);
+                ret = true;
+            }
+            stmtInsert.close();
+            rs.close();
+            con.close();
+        } catch (java.sql.SQLException e) {
+            FL.d(TAG, "Row not inserted \n" + e.getSQLState() + " error = " + e.getErrorCode());
+        }
+        return ret;
+    }
+    /*
+    public static boolean insertGoodsPosition(String storage, int storeman, GoodsPosition[] gpArray) {
+        boolean ret = false;
+        String insert = "insert into dbo.dctRcvAcceptGoods(storage,storeman,goods,goodsbarcode,qnt,cellinbarcode,scandt) values ('";
+        String query;// = insert + storage + "'," + storeman + ",'" + gp.getId() + "','" + gp.getBarcode() + "'," + gp.getQnt() + ",'" + gp.getCell() +"','" + gp.getTime() +"');";
+        Connection con;
+        String[] generatedColumns = new String[] { "rowid" };
+        PreparedStatement stmtInsert;
+        con = connectionClass.CONN();
+        ResultSet rs;
+        long row;
+        int len = gpArray.length;
+        for (int i = 0; i < len; i++) {
+            ret = false;
+            query =  insert + storage + "'," + storeman + ",'" + gpArray[i].getId() + "','" + gpArray[i].getBarcode() + "'," + gpArray[i].getQnt() +
+                    ",'" + gpArray[i].getCell() +"','" + gpArray[i].getTime() +"');";
+            FL.d(TAG, "Query =" + query);
+            try {
+                stmtInsert = con.prepareStatement(query, generatedColumns);
+                int affectedRows = stmtInsert.executeUpdate();
+                if (affectedRows == 0) {
+                    FL.d(TAG, "Row not inserted");
+                }
+                rs = stmtInsert.getGeneratedKeys();
+                if (rs.next()) {
+                    row = rs.getLong(1);
+                    Log.d(TAG, "Inserted ID = " + row);
+                    ret = true;
+                } else
+                    break;
+                stmtInsert.close();
+                rs.close();
+            } catch (java.sql.SQLException e) {
+                FL.d(TAG, "Row not inserted \n" + e.getSQLState() + " error = " + e.getErrorCode());
+                break;
+            }
+        }
+        try {
+            con.close();
+        } catch (java.sql.SQLException e) {
+            FL.d(TAG, "Row not inserted \n" + e.getSQLState() + " error = " + e.getErrorCode());
+        }
+        return ret;
+    }
+
+     */
 }
