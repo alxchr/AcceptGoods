@@ -448,6 +448,19 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
                     Log.d(TAG,"Manual input =" + scan + " cell =" + cell);
                 }
                 if (CheckCode.checkCell(cell)) {
+                    if (scan.length() == 12) {
+                        String res = scan;
+                        int [] resDigit = new int[12];
+                        for (int i = 0; i < 12; i++) {
+                            resDigit[i] = Integer.parseInt(res.substring(i, i+1));
+                        }
+                        int e = (resDigit[1] + resDigit[3] + resDigit[5] +resDigit[7] + resDigit[9] + resDigit[11]) * 3;
+                        int o = resDigit[0] + resDigit[2] + resDigit[4] +resDigit[6] + resDigit[8] + resDigit[10];
+                        String r = String.valueOf(o+e);
+                        int c = 10 - Integer.parseInt(r.substring(r.length() -1));
+                        cell = res + c;
+                        Log.d(TAG, "Cell =" + cell);
+                    }
                     etScan.setEnabled(false);
                     etQnt.setEnabled(true);
                     etQnt.requestFocus();

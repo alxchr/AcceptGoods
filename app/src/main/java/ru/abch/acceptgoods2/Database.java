@@ -228,7 +228,9 @@ public class Database {
                 }
                 mDB.setTransactionSuccessful();
                 mDB.endTransaction();
+                rs.close();
             } else Log.d(TAG, "No result");
+            con.close();
         } catch (java.sql.SQLException e) {
             e.printStackTrace();
         }
@@ -270,7 +272,9 @@ public class Database {
                 }
                 mDB.setTransactionSuccessful();
                 mDB.endTransaction();
+                rs.close();
             } else Log.d(TAG, "No result");
+            con.close();
         } catch (java.sql.SQLException e) {
             e.printStackTrace();
         }
@@ -283,7 +287,13 @@ public class Database {
         String goodsTable = DB_TABLE_GOODS;
         String description, cell, article;
         Log.d(TAG, "Goods position barcode = " + barcode);
+        /*
         Cursor c = mDB.query( barcodeTable, null,COLUMN_BARCODE + "=?", new String[]{barcode},
+                null, null, null, null );
+
+         */
+//  Honeywell EDA50K trims EAN-13 last digit
+        Cursor c = mDB.query( barcodeTable, null,COLUMN_BARCODE + " like ?", new String[]{barcode+"%"},
                 null, null, null, null );
         if (c.moveToFirst()) {
             goodsCode = c.getString(1);
