@@ -444,6 +444,7 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
                     int o = resDigit[0] + resDigit[2] + resDigit[4] +resDigit[6] + resDigit[8] + resDigit[10];
                     String r = String.valueOf(o+e);
                     int c = 10 - Integer.parseInt(r.substring(r.length() -1));
+                    if (c == 10) c = 0;
                     cell = result + c;
                     Log.d(TAG,"Manual input =" + scan + " cell =" + cell);
                 }
@@ -458,6 +459,7 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
                         int o = resDigit[0] + resDigit[2] + resDigit[4] +resDigit[6] + resDigit[8] + resDigit[10];
                         String r = String.valueOf(o+e);
                         int c = 10 - Integer.parseInt(r.substring(r.length() -1));
+                        if (c == 10) c = 0;
                         cell = res + c;
                         Log.d(TAG, "Cell =" + cell);
                     }

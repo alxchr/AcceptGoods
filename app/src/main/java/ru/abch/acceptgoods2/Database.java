@@ -282,19 +282,31 @@ public class Database {
     static GoodsPosition getGoodsPosition(String barcode) {
         GoodsPosition ret = null;
         String goodsCode;
+        String barCode = barcode;
         int qnt, total;
         String barcodeTable = DB_TABLE_BARCODES;
         String goodsTable = DB_TABLE_GOODS;
         String description, cell, article;
-        Log.d(TAG, "Goods position barcode = " + barcode);
-        /*
-        Cursor c = mDB.query( barcodeTable, null,COLUMN_BARCODE + "=?", new String[]{barcode},
-                null, null, null, null );
+        //  Honeywell EDA50K trims EAN-13 last digit
+        if (barcode.length() == 12) {
+            int [] resDigit = new int[12];
+            for (int i = 0; i < 12; i++) {
+                resDigit[i] = Integer.parseInt(barcode.substring(i, i+1));
+            }
+            int e = (resDigit[1] + resDigit[3] + resDigit[5] +resDigit[7] + resDigit[9] + resDigit[11]) * 3;
+            int o = resDigit[0] + resDigit[2] + resDigit[4] +resDigit[6] + resDigit[8] + resDigit[10];
+            String r = String.valueOf(o+e);
+            int c = 10 - Integer.parseInt(r.substring(r.length() -1));
+            if (c == 10) c = 0;
+            barCode = barcode + c;
+        }
+        Log.d(TAG, "Goods position barcode =" + barCode + " scan =" + barcode);
 
-         */
-//  Honeywell EDA50K trims EAN-13 last digit
-        Cursor c = mDB.query( barcodeTable, null,COLUMN_BARCODE + " like ?", new String[]{barcode+"%"},
+        Cursor c = mDB.query( barcodeTable, null,COLUMN_BARCODE + "=?", new String[]{barCode},
                 null, null, null, null );
+/*
+        Cursor c = mDB.query( barcodeTable, null,COLUMN_BARCODE + " like ?", new String[]{barcode+"%"},
+                null, null, null, null ); */
         if (c.moveToFirst()) {
             goodsCode = c.getString(1);
             qnt = c.getInt(3);
@@ -306,7 +318,7 @@ public class Database {
                 cell = cGoods.getString(3);
                 total = cGoods.getInt(5);
                 article = cGoods.getString(4);
-                ret = new GoodsPosition(goodsCode, barcode, description, cell, qnt, article, total);
+                ret = new GoodsPosition(goodsCode, barCode, description, cell, qnt, article, total);
                 Log.d(TAG, "Found goods position desc = " + description + " cell = " + cell);
             }
         }
